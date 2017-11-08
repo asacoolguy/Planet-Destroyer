@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: e561f50d86319d14b81a1216290b27ae
+timeCreated: 1509832589
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Fh_Space
+  fontNames:
+  - Fh_Space
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

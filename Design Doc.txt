@@ -1,0 +1,123 @@
+Planet Destroyers
+
+
+- 2D mobile "infinite runner" arcade game
+- Planet Defense game with coin collection, power ups, characters and upgrades
+- Uniqueness points
+	instead of shooting planets with bullets, YOU ARE THE BULLET. 
+	use orbits to manuver around the map
+	
+
+Basic Gameplay 
+- home planet in middle of screen, constantly rotating
+- hostile objects spawn in all corners of the screen and fly towards the middle, destroy them by blasting off
+	different sized planets, asteroids, medium planets, big planets. bigger ones need cracking. 
+	space debris: can only be destroyed by hitting a weak point. otherwise bounces player away
+	spinng planets: has a ring, you must land on it right or you will get smacked away
+	blackholes? randomly spinning planets? flying ufo enemies? 
+- player actions
+	jump to blast off planets. 
+	special action: homing beacon: instantly stop all movement and fly slowly back to the home planet, until landing on it or another planet
+- pick ups
+	planets drop coins upon explosion that you can pick up
+		big treasure planets drop big coins that cannot be attracted but they are bigger so you can just run into it
+	special planets drop power ups upon blowing up
+		extra speed, more mass (faster attraction), double coins, etc
+- Orbital slings
+	aim slightly off a big planet to use the planet's gravity to change your flight course
+- character classes/special powerups
+	default skill is the homing beacon
+	use powerups to get new skills 
+		dash forward
+		hookshot
+		enlarge
+		teleport
+- upgrades
+	player
+		charge upgrade 
+		flying max speed
+		combo decay speed
+	planet
+		rotation speed
+		health
+		blast off speed
+
+Random ideas
+- planet pushing
+	- if the planet doesn't blow up, taking off will push them a bit in the direction opposite of take off
+		charge your jump to do extra pushes
+	- use this to make planets hit each other. planets that hit each other will
+		A: become coupled and will travel together as a group. if one blows up they will all blow up. use this to get combos and get extra points
+		B: damage each other 
+- action button
+	has charges that you can replenish by blowing up planets
+- combos
+	- blow up planets in quick successtion for extra points
+	- maybe every 3 seconds. can be upgraded to last loner
+- adaptive soundtrack
+	more planets on screen = more instruments on the sound track
+- progression
+	instead of simple level scalling, maybe have some sort of progression system?
+	planet travels to new galaxy and every current planet gets a reskin
+	OR planet travels to new galaxy and 1 new element is introduced
+	figure out when this ends
+- dynamic dificulty
+	make game harder/easier based on how player is doing/how many enemies on screen
+	check this out: https://en.wikipedia.org/wiki/Markov_chain
+	https://www.gamasutra.com/view/feature/130188/gameplay_design_fundamentals_.php?page=5
+- story mode divided into worlds like downwell
+	set amount of worlds you go through. and there is an ending. but you can play the game skillfully and use that to get more points. 
+	
+
+
+TODO
+- what happens when you're just flying
+	should be activated even after warping
+	also warping needs a lineRenderer
+- planet pushing
+- planet coupling
+- planet combos
+- better spawning
+	planets should spawn somewhere far from current planets
+-Refactor
+	code for switching planets when you just hit them vs code for landonplanet
+	Cloning new player obj for warping and notifying all objs (such as gameManager and playerHUD of a new player)
+- particle system
+	trails: https://www.youtube.com/watch?v=agr-QEsYwD0
+		
+BUGS
+- when planet is flying towards you and you jump on it you get crushed between it and the home planet
+		
+		
+ORBITS
+- goal: home planet should absolute attract within a certain zone, and 
+- gravity formula of 2.5 power and home planet mass of 18 seems too much. 
+
+Development phases
+- phase 1: basic game for alpha testing -- by 11/13
+	orbits and jumps
+	correct planet spawning and destruction
+	difficulty progression
+	planet coupling and combos
+	coins and magnetic attraction
+	score calculation and game over screen
+
+- phase 2: polish the game
+	Special skills
+	music
+		background music
+		sound effects
+	art 
+		players
+		planets
+		pick ups
+		backgrounds
+		menus
+	special effects
+		landing
+		take off
+		pick up
+	particle effects
+		
+		
+		
