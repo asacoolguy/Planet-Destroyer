@@ -12,7 +12,6 @@ public class MapManager : MonoBehaviour {
 	private float lastSpawnAngle = 0f;
 
 	private Vector2 boundaries;
-	private bool playerInBoundary;
 	private PlayerScript player;
 	private PlayerHUDScript playerHUD;
 
@@ -28,13 +27,6 @@ public class MapManager : MonoBehaviour {
 	void Update () {
 		if (!IsPlayerInBoundary() && !player.GetIsLanded()){
 			WarpPlayer();
-		}
-	}
-
-
-	void OnTriggerStay2D(Collider2D other){
-		if (other.tag == "Player"){
-			playerInBoundary = true;
 		}
 	}
 
@@ -77,9 +69,8 @@ public class MapManager : MonoBehaviour {
 		GameObject oldPlayerObj = player.gameObject;
 		GameObject newPlayerObj = Instantiate(oldPlayerObj, newPos, oldPlayerObj.transform.rotation);
 		player = newPlayerObj.GetComponent<PlayerScript>();
-		player.GetComponent<Rigidbody2D>().velocity = oldPlayerObj.GetComponent<Rigidbody2D>().velocity;
+		player.GetDataFromOldPlayer(oldPlayerObj.GetComponent<PlayerScript>());
 		oldPlayerObj.tag = "Untagged";
-		player.ClearLastPlanet();
 		playerHUD.UpdatePlayerObj(newPlayerObj);
 
 		StartCoroutine(TimedDestroyObject(oldPlayerObj, 5f));

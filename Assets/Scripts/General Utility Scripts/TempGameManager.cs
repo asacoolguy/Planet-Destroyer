@@ -18,7 +18,7 @@ public class TempGameManager : MonoBehaviour {
 
 	// singleton behavior
 	//public static TempGameManager instance = null;
-	[SerializeField]private bool gameLooping, gameRunning;
+	private bool gameLooping, gameRunning;
 
 	void OnEnable(){
 		SceneManager.sceneLoaded += OnSceneFinishedLoading;
@@ -88,7 +88,7 @@ public class TempGameManager : MonoBehaviour {
 			}
 
 			// raise difficulty based on planets destoryed
-			difficulty = planetDestroyedCount / 10;
+			difficulty = planetDestroyedCount / 10 + 1;
 			playerHUD.UpdateDifficultyText(difficulty);
 
 			yield return null;

@@ -56,7 +56,12 @@ public abstract class PlayerScript : MonoBehaviour {
 	public float actionTimeLimit;
 	private float currentActionTime;
 
-	public void Awake(){
+	// planet pushing
+	public float planetPushSpeed;
+
+
+
+	protected void Awake(){
 		playerAudio = GetComponent<PlayerAudioScript>();
 		initialPosition = transform.position;
 		initialRotation = transform.rotation.eulerAngles;
@@ -64,16 +69,19 @@ public abstract class PlayerScript : MonoBehaviour {
 		tail = GetComponent<TrailRenderer>();
 	}
 
-	public void Start () {
+
+	protected void Start () {
 		cameraShaker = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraShakeScript>();
 		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>();
 
-		// puts player in its initial state
-		ResetPlayerStates();
+		// puts player in its initial state if it has no velocity aka it just respawned
+		if (GetComponent<Rigidbody2D>().velocity == Vector2.zero){
+			ResetPlayerStates();
+		}
 	}
 	
 	// Update is called once per frame
-	public void Update () {
+	protected void Update () {
 		if (!isDead){ 
 			if (tag == "Player"){
 				if (!isLanded){ 
@@ -92,12 +100,6 @@ public abstract class PlayerScript : MonoBehaviour {
 				else{ 
 					// if player has landed, then it has no velocity and it should rotate to stand on the planet
 					GetComponent<Rigidbody2D>().velocity = Vector2.zero;
-
-					// increase power level when landed. if powerup charge is active, charge at the super fast rate
-					float chargeRate = currentPlanet.powerChargePerSecond;
-					if (activatedPowerup == PowerupScript.PowerupType.charge){
-						chargeRate = powerupChargeRate;
-					}
 				}
 			}
 		}
@@ -160,7 +162,7 @@ public abstract class PlayerScript : MonoBehaviour {
 		powerupCountdown = 0;
 		powerupEffect.DeactivateAllEffects();
 		coinCombo = 0;
-		transform.position = initialPosition;
+		transform.position = initialPosition; // TODO: need better method for respawn
 		transform.eulerAngles = initialRotation;
 		//powerLevel = powerLevelInitial;
 		nearbyPlanets.Clear();
@@ -227,8 +229,14 @@ public abstract class PlayerScript : MonoBehaviour {
 					gameManager.IncrementScore(currentPlanet.GetPointValue(), this.transform.position);
 					gameManager.IncrementPlanetDestroyedCount(1);
 				}
+				else{ // if the planet will not explode, push it
+					float pushSpeed = planetPushSpeed;
+					if (chargeTime >= maxChargeTime){
+						pushSpeed = planetPushSpeed * 3;
+					}
+					currentPlanet.PushPlanet(-leavingAngle, pushSpeed);
+				}
 
-				//nearbyPlanets.Remove (currentPlanet.gameObject);
 				currentPlanet.SelfDestruct();
 				currentPlanet = null;
 			}
@@ -360,13 +368,13 @@ public abstract class PlayerScript : MonoBehaviour {
 
 
 	// changes the length of the trail 
-	private IEnumerator EnableTail(bool b, float t){
+	public IEnumerator EnableTail(bool b, float t){
 		if (b){
 			tail.time = 1f;
 		}
 		else{
 			float counter = 0f;
-			while (isLanded && counter < t){
+			while (counter < t){
 				tail.time = Mathf.MoveTowards(tail.time, 0f, t * Time.deltaTime);
 				counter += Time.deltaTime;
 				yield return null;
@@ -419,8 +427,24 @@ public abstract class PlayerScript : MonoBehaviour {
 		return canAction;
 	}
 
+	public bool GetActionTaken(){
+		return actionTaken;
+	}
+
+	public float GetCurrentActionTime(){
+		return currentActionTime;
+	}
+
 	public float GetPowerLevel(){
 		return powerLevel;
+	}
+
+	public Vector3 GetInitialPosition(){
+		return initialPosition;
+	}
+
+	public Vector3 GetInitialRotation(){
+		return initialRotation;
 	}
 
 	public void SetCanGetPoints(bool b){
@@ -445,9 +469,30 @@ public abstract class PlayerScript : MonoBehaviour {
 		return nearbyPlanets.Contains(planet);
 	}
 
-
 	public void ClearLastPlanet(){
 		lastPlanet = null;
+	}
+
+
+	public void GetDataFromOldPlayer(PlayerScript oldPlayer){
+		isLanded = oldPlayer.GetIsLanded();
+		canJump = oldPlayer.GetCanJump();
+		canAction = oldPlayer.GetCanAction();
+		actionTaken = oldPlayer.GetActionTaken();
+		currentActionTime = oldPlayer.GetCurrentActionTime();
+
+		GetComponent<Rigidbody2D>().velocity = oldPlayer.GetComponent<Rigidbody2D>().velocity;
+		// powerup stuff
+		/*
+		activatedPowerup = PowerupScript.PowerupType.none;
+		powerupCountdown = 0;
+		powerupEffect.DeactivateAllEffects();
+		coinCombo = 0;
+		transform.position = initialPosition;
+		transform.eulerAngles = initialRotation;
+		//powerLevel = powerLevelInitial;
+		nearbyPlanets.Clear();
+		*/
 	}
 
 }

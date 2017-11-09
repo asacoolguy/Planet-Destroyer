@@ -14,6 +14,7 @@ public class PlanetScript : MonoBehaviour {
 	// variables about planet cracking
 	public int maxCracks; // 2 cracks for big planets, 0 cracks for asteroids
 	private int crackedState; // 0, 1 or 2 cracks. 3 means destroyed.
+	public float planetPushDecayTime;
 
 	private PlanetGravityScript gravityField;
 	public Sprite regular, cracked1, cracked2, explosion;
@@ -132,6 +133,24 @@ public class PlanetScript : MonoBehaviour {
 			yield return null;
 		}
 		Destroy(this.gameObject);
+	}
+
+
+	// pushes the planet in the given direction and intensity 
+	public void PushPlanet(Vector2 angle, float intensity){
+		StartCoroutine(PushPlanetHelper(angle, intensity));
+	}
+
+	private IEnumerator PushPlanetHelper(Vector2 angle, float intensity){
+		float counter = 0;
+		float t = 0;
+		while(!isDestroyed && counter <= planetPushDecayTime){
+			Vector3 change = (Vector3) angle * Mathf.SmoothStep(intensity, 0, t) * Time.deltaTime;
+			transform.position += change;
+			counter += Time.deltaTime;
+			t = counter/planetPushDecayTime;
+			yield return null;
+		}
 	}
 
 	public bool WillExplodeNext(){

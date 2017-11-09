@@ -12,9 +12,12 @@ Basic Gameplay
 - home planet in middle of screen, constantly rotating
 - hostile objects spawn in all corners of the screen and fly towards the middle, destroy them by blasting off
 	different sized planets, asteroids, medium planets, big planets. bigger ones need cracking. 
+	planets with rotating moons -> have to destroy moon first. if destroy planet first the moon will fly off 
 	space debris: can only be destroyed by hitting a weak point. otherwise bounces player away
 	spinng planets: has a ring, you must land on it right or you will get smacked away
 	blackholes? randomly spinning planets? flying ufo enemies? 
+	UFOs that charge forward a big chunk of space at a time. -> gets destroyed by pushing planets
+	ironclad planets that can only be destroyed via chainedExplosions
 - player actions
 	jump to blast off planets. 
 	special action: homing beacon: instantly stop all movement and fly slowly back to the home planet, until landing on it or another planet
@@ -65,28 +68,39 @@ Random ideas
 	make game harder/easier based on how player is doing/how many enemies on screen
 	check this out: https://en.wikipedia.org/wiki/Markov_chain
 	https://www.gamasutra.com/view/feature/130188/gameplay_design_fundamentals_.php?page=5
-- story mode divided into worlds like downwell
+- story mode divided into worlds like downwell and burrito bull
 	set amount of worlds you go through. and there is an ending. but you can play the game skillfully and use that to get more points. 
+- should the upgrade system be like downwell too? after beating each stage you choose to buy an upgrade	
+	or like burrito bull? you finish each stage, use the money to buy things and then try again?
+- glow: https://www.assetstore.unity3d.com/en/#!/content/28044
+- outline: http://nielson.io/2016/04/2d-sprite-outlines-in-unity/ 
 	
 
 
 TODO
-- what happens when you're just flying
-	should be activated even after warping
-	also warping needs a lineRenderer
-- planet pushing
 - planet coupling
+	simulate outline effect by rendering another sprite under it
 - planet combos
+- better difficulty curve
 - better spawning
 	planets should spawn somewhere far from current planets
+- respawn stuff and initial positions
 -Refactor
 	code for switching planets when you just hit them vs code for landonplanet
 	Cloning new player obj for warping and notifying all objs (such as gameManager and playerHUD of a new player)
+		also cleaner way of copying data from one player to the next
+	Detecting when a player has respawned vs. warped for the sake of resetting player state
+		use an event system to notify all objs that care about players to switch pointers
+		also create a more elegant way of retiring old players so they don't show up anymore
+	planets could be refactored with polymorphism 
 - particle system
 	trails: https://www.youtube.com/watch?v=agr-QEsYwD0
+- upgrade to new unity?
+
 		
 BUGS
 - when planet is flying towards you and you jump on it you get crushed between it and the home planet
+- camera stuck on shaking even when game is over (because everything is based on deltaTime, maybe put camera on real time)
 		
 		
 ORBITS

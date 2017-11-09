@@ -3,7 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class CaptainSpaceScript : PlayerScript {
-	public float homingBoosterSpeed;
+	[SerializeField]private float tractorBeamSpeed;
+	private LineRenderer tractorBeam;
+
+	private void Awake(){
+		base.Awake();
+		tractorBeam = GetComponent<LineRenderer>();
+	}
 
 	public override void ActivatePlayerAction(){
 		if (!isLanded && canAction){
@@ -16,15 +22,19 @@ public class CaptainSpaceScript : PlayerScript {
 
 	// captainSpace's action allows player to fly back to home planet at a certain speed until it lands a planet
 	private IEnumerator ActivateTractorBeam(){
-		Vector2 newVelocity = transform.position.normalized * homingBoosterSpeed * -1;
+		tractorBeam.enabled = true;
+		StartCoroutine(EnableTail(false, 1f));
+
+		Vector2 newVelocity = transform.position.normalized * tractorBeamSpeed * -1;
 		playerAudio.PlayTractorBeamSound();
 		while(!isLanded){
 			GetComponent<Rigidbody2D>().velocity = newVelocity;
+			tractorBeam.SetPosition(1, transform.position);
 			canJump = false;
-
 			yield return null;
 
 		}
+		tractorBeam.enabled = false;
 		playerAudio.StopTractorBeamSound();
 	}
 
