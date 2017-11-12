@@ -10,7 +10,7 @@ public class PlayerHUDScript : MonoBehaviour {
 	private string objectiveString;
 
 	private Slider slider;
-	private Text scoreText, difficultyText;
+	private Text scoreText, difficultyText, coinText;
 	private Button jumpButton, actionButton;
 
 	public bool isHUDActive;
@@ -24,6 +24,7 @@ public class PlayerHUDScript : MonoBehaviour {
 		// sets up all the GUI elements
 		scoreText = transform.Find("Top Bar").Find("Score").gameObject.GetComponent<Text>();
 		difficultyText = transform.Find("Top Bar").Find("Difficulty").gameObject.GetComponent<Text>();
+		coinText = transform.Find("Top Bar").Find("Coin").gameObject.GetComponent<Text>();
 		slider = transform.Find("Power Slider").gameObject.GetComponent<Slider>();
 		jumpButton = transform.Find("Jump Button").gameObject.GetComponent<Button>();
 		actionButton = transform.Find("Action Button").gameObject.GetComponent<Button>();
@@ -72,12 +73,16 @@ public class PlayerHUDScript : MonoBehaviour {
 
 	}
 
-	public void UpdateScoreText(int score){
-		scoreText.text = "Score: " + score;
+	public void UpdateScoreText(float score){
+		scoreText.text = "Score: " + Mathf.RoundToInt(score);
 	}
 
 	public void UpdateDifficultyText(int difficulty){
 		difficultyText.text = "Difficulty: " + difficulty;
+	}
+
+	public void UpdateCoinText(int coinCollected){
+		coinText.text = "Coins Collected: " + coinCollected;
 	}
 
 	public void UpdateSliderValue(){
@@ -115,17 +120,13 @@ public class PlayerHUDScript : MonoBehaviour {
 		actionButton.interactable = b;
 	}
 
-	public void ShowFloatingText(int value, Vector3 position){
-		string s = "+" + value + "pt";
-		if (value > 1){
+	public void ShowFloatingText(float value, Vector3 position){
+		string s = "+" + Mathf.RoundToInt(value) + "pt";
+		if (value > 1f){
 			s += "s";
 		}
 
 		Color c = Color.yellow;
-		if (value < 0){
-			c = Color.red;
-		}
-
 		GameObject text = Instantiate(floatingText, Vector3.zero, Quaternion.identity) as GameObject;
 		text.transform.SetParent(transform.parent, false);
 		text.transform.eulerAngles = Vector3.zero;

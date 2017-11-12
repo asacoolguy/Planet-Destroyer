@@ -6,11 +6,16 @@ using UnityEngine.SceneManagement;
 
 public class TempGameManager : MonoBehaviour {
 	public GameObject playerObj;
-	public GameObject playerHUDObj, notificationObj;
-	private int score, planetDestroyedCount;
+	public GameObject playerHUDObj, notificationObj, comboTextObj;
+	private float score;
+	private int coinCollected, planetDestroyedCount, planetCombo, maxPlanetCombo;
+	public float comboFadeTime;
+	private float currentComboFadeTime;
 	private PlayerHUDScript playerHUD;
+	private ComboTextScript comboText;
 	private MapManager mapManager;
 
+	public int startingDifficulty = 1;
 	private int difficulty;
 	private bool canSpawn = true;
 
@@ -42,11 +47,15 @@ public class TempGameManager : MonoBehaviour {
 
 		mapManager = GameObject.FindGameObjectWithTag("MapManager").GetComponent<MapManager>();
 		playerHUD = playerHUDObj.GetComponent<PlayerHUDScript>();
+		comboText = comboTextObj.GetComponent<ComboTextScript>();
 		gameLooping = false;
 		gameRunning = false;
 		Time.timeScale = 1;
 		difficulty = 1;
-		score = 0;
+		score = 0f;
+		coinCollected = 0;
+		planetCombo = 0;
+		maxPlanetCombo = 0;
 		planetDestroyedCount = 0;
 	}
 
@@ -88,8 +97,15 @@ public class TempGameManager : MonoBehaviour {
 			}
 
 			// raise difficulty based on planets destoryed
-			difficulty = planetDestroyedCount / 10 + 1;
+			difficulty = planetDestroyedCount / 10 + startingDifficulty;
 			playerHUD.UpdateDifficultyText(difficulty);
+
+			if (currentComboFadeTime > 0){
+				currentComboFadeTime -= Time.deltaTime;
+			}
+			else{
+				planetCombo = 0;
+			}
 
 			yield return null;
 		}
@@ -101,7 +117,8 @@ public class TempGameManager : MonoBehaviour {
 		GetComponent<AudioSource>().PlayOneShot(gameOverSound);
 		Time.timeScale = 0;
 		notificationObj.SetActive(true);
-		notificationObj.transform.Find("Score Text").GetComponent<Text>().text = "Score: " + score;
+		notificationObj.transform.Find("Score Text").GetComponent<Text>().text = "Score: " + Mathf.RoundToInt(score);
+		notificationObj.transform.Find("Combo Text").GetComponent<Text>().text = "Max Combo: " + maxPlanetCombo;
 		playerHUD.SetIsHUDActive(false);
 
 		gameLooping = false;
@@ -114,6 +131,14 @@ public class TempGameManager : MonoBehaviour {
 	private IEnumerator SpawnPlanet(int i){
 		mapManager.SpawnPlanet(i);
 		canSpawn = false;
+
+		float waitSec = 0f;
+		if (difficulty < 4f){
+			waitSec = 6f - difficulty + i * 1.5f;
+		}
+		else{
+			waitSec = (i + 1) * 1.5f;
+		}
 
 		yield return new WaitForSeconds (6f - difficulty + i * 2);
 		canSpawn = true;
@@ -140,13 +165,45 @@ public class TempGameManager : MonoBehaviour {
 		}
 	}
 
+
 	public void IncrementScore(int value, Vector3 position){
-		score += value;
+		currentComboFadeTime = comboFadeTime;
+		planetCombo += 1;
+		maxPlanetCombo = Mathf.Max(planetCombo, maxPlanetCombo);
+
+		float newValue = value;
+		if (planetCombo > 2){
+			comboText.PlayIncreaseCombosAnimation();
+			comboText.SetText(planetCombo + " COMBO!");
+			newValue = value * (1f + planetCombo * 0.2f);
+		}
+
+		score += newValue;
 		playerHUD.UpdateScoreText(score);
-		playerHUD.ShowFloatingText(value, position);
+		playerHUD.ShowFloatingText(newValue, position);
+		planetDestroyedCount += 1;
 	}
 
-	public void IncrementPlanetDestroyedCount(int value){
-		planetDestroyedCount += value;
+
+	public void GetCoin(int value){
+		coinCollected += value;
+		playerHUD.UpdateCoinText(coinCollected);
+	}
+
+
+	public static float GetAngleFromVector(Vector3 input){
+		float angle;
+		if (input.x == 0) {
+			if (input.y > 0)
+				angle = 90;
+			else{
+				angle = 270;
+			}
+		}
+		else{
+			angle =  Mathf.Atan2 (input.y, input.x) * Mathf.Rad2Deg;
+		}
+
+		return angle;
 	}
 }

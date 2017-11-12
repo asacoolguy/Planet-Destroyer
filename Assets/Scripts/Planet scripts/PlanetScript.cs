@@ -5,29 +5,44 @@ using System.Collections.Generic;
 public class PlanetScript : MonoBehaviour { 
 	[SerializeField]private int pointValue;
 	public float mass; // mass of the planet, affects its gravitation pull
-	public float powerChargePerSecond; // speed at which a player's power will charge
+	public float weight; // weight of the planet, affects how far it will get pushed
 	public float rotationSpeed; // number of degrees the planet rotates every second
-	public float explosionSpeed; // speed the planet adds to the players on explosion
 	public float moveSpeed; // speed at which the planet moves towards the middle
 	private Vector2 moveDirection;
 	private bool isDestroyed;
-	// variables about planet cracking
+
+	// planet cracking variables
 	public int maxCracks; // 2 cracks for big planets, 0 cracks for asteroids
 	private int crackedState; // 0, 1 or 2 cracks. 3 means destroyed.
-	public float planetPushDecayTime;
 
+	// planet pushing variables
+	private Vector2 pushForce;
+	public float planetPushDecayTime;
+	private bool collidedAfterPush;
+	private GameObject lastInteractedObj; // used to make sure collision detection doesn't happen twice
+
+	// coin emitting variables
+	public int coinsToRelease;
+	[Range (0f, 1f)]
+	public float bigOrbReleaseChance;
+	public GameObject coinOrb, coinOrbBig;
+
+	// keep track of other game objects
 	private PlanetGravityScript gravityField;
 	public Sprite regular, cracked1, cracked2, explosion;
 	public AudioClip explodeSound, crackSound1, crackSound2;
 	private CameraShakeScript cameraShaker;
+	private TempGameManager gameManager;
 
 	void Start () {
 		isDestroyed = false;
 		crackedState = 0;
 		gravityField = transform.GetChild(0).GetComponent<PlanetGravityScript>();
-		cameraShaker = GameObject.FindGameObjectsWithTag("MainCamera")[0].GetComponent<CameraShakeScript>();
+		cameraShaker = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraShakeScript>();
+		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>();
 
-		moveDirection = (Vector2) transform.position.normalized * -1f;
+		pushForce = Vector2.zero;
+		collidedAfterPush = false;
 	}
 
 	void Update () {
@@ -35,22 +50,36 @@ public class PlanetScript : MonoBehaviour {
 		transform.Rotate (0, 0, Time.deltaTime * rotationSpeed);
 
 		// move the planet towards the middle
-		if (tag != "HomePlanet"){
-			if (isDestroyed == false){
-				transform.position += (Vector3) moveDirection * moveSpeed * Time.deltaTime;
+		if (tag == "Planet"){
+			if(isDestroyed == false){
+				moveDirection = (Vector2) transform.position.normalized * -1f;
+				GetComponent<Rigidbody2D>().velocity = moveDirection * moveSpeed + pushForce;
+			}
+			else{
+				GetComponent<Rigidbody2D>().velocity = Vector2.zero;
 			}
 		}
-		else{
+		else if(tag == "HomePlanet"){
 			transform.position = Vector3.zero;
 		}
 	}
 
 
-	// on collision with home planet, game over
-	// TODO: when hitting another planet, maybe get knocked over a bit?
-	void OnTriggerEnter2D(Collider2D other) {
+	void OnCollisionEnter2D(Collision2D other) {
+		// if this is homeplanet and it collided with a normal planet, game over
 		if (this.tag == "HomePlanet" && other.gameObject.tag == "Planet") {
 			GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>().StopGameRunning();
+		}
+		// if this is a planet-planet collision, the current planet is being moved by pushForce and the two planet havent just interacted with each other
+		else if(this.tag == "Planet" && other.gameObject.tag == "Planet" && pushForce != Vector2.zero && other.gameObject != lastInteractedObj){
+			PlanetScript otherPlanet = other.gameObject.GetComponent<PlanetScript>();
+			SetLastInteractedObj(otherPlanet.gameObject);
+			otherPlanet.SetLastInteractedObj(this.gameObject);
+
+			Vector3 damageDirection = (other.transform.position - this.transform.position).normalized;
+			this.TakeDamage(damageDirection, false);
+			collidedAfterPush = true;
+			otherPlanet.TakeDamage(-damageDirection, false);
 		}
 	}
 
@@ -90,8 +119,8 @@ public class PlanetScript : MonoBehaviour {
 		}
 	}
 
-	// called when another player blows this planet up
-	public void SelfDestruct(){
+	// called when another player blows this planet up. damageFromTakeOff is true when the damage comes from player taking off
+	public void TakeDamage(Vector3 damageDirection, bool damageFromTakeOff){
 		// increments the cracked state and blow it up if it exceeds the max number of allowed cracks. 
 		// also do camera shake here? 
 		crackedState += 1;
@@ -99,6 +128,14 @@ public class PlanetScript : MonoBehaviour {
 		if (crackedState > maxCracks){
 			crackedState = -1;
 			StartCoroutine(SelfDestructHelper());
+			gameManager.IncrementScore(pointValue, this.transform.position);
+
+			if (damageFromTakeOff){
+				ReleaseCoinsToFollowPlayer(damageDirection);
+			}
+			else{
+				ReleaseCoins(-damageDirection);
+			}
 		}
 		else{
 			StartCoroutine(ChangeSprite());
@@ -113,6 +150,7 @@ public class PlanetScript : MonoBehaviour {
 
 	}
 
+
 	IEnumerator SelfDestructHelper(){
 		// TODO: change this to a better animation method
 		isDestroyed = true;
@@ -120,6 +158,7 @@ public class PlanetScript : MonoBehaviour {
 		GetComponent<CircleCollider2D>().enabled = false;
 		StartCoroutine(ChangeSprite());
 		gameObject.GetComponent<AudioSource> ().PlayOneShot (explodeSound);
+
 		yield return new WaitForSeconds(0.2f);
 
 		// moves player out if this planet is a parent of the player
@@ -136,22 +175,85 @@ public class PlanetScript : MonoBehaviour {
 	}
 
 
-	// pushes the planet in the given direction and intensity 
-	public void PushPlanet(Vector2 angle, float intensity){
-		StartCoroutine(PushPlanetHelper(angle, intensity));
+	// pushes the planet in the given direction and speed 
+	public void PushPlanet(Vector2 direction, float speed){
+		StartCoroutine(PushPlanetHelper(direction, speed));
 	}
 
-	private IEnumerator PushPlanetHelper(Vector2 angle, float intensity){
+	private IEnumerator PushPlanetHelper(Vector2 direction, float speed){
 		float counter = 0;
 		float t = 0;
-		while(!isDestroyed && counter <= planetPushDecayTime){
-			Vector3 change = (Vector3) angle * Mathf.SmoothStep(intensity, 0, t) * Time.deltaTime;
-			transform.position += change;
+		collidedAfterPush = false;
+		while(!isDestroyed && !collidedAfterPush && counter <= planetPushDecayTime){
+			pushForce = direction * Mathf.SmoothStep(speed, 0, t) / weight;
 			counter += Time.deltaTime;
 			t = counter/planetPushDecayTime;
 			yield return null;
 		}
+		pushForce = Vector2.zero;
 	}
+
+
+	// helper function called on destruction, sends out a set number of coins around a certain direction
+	private void ReleaseCoins(Vector3 releaseDirection){
+		if (coinsToRelease == 0){
+			return;
+		}
+
+		// randomize the release angle for each coin and instantiate them with the right velocity
+		float startingAngle = TempGameManager.GetAngleFromVector(releaseDirection) - 90f;
+		float anglePerSection = 180f / coinsToRelease;
+		for (int i = 0; i < coinsToRelease; i++){
+			float releaseAngle = startingAngle + anglePerSection * i + Random.Range(-anglePerSection / 3f, anglePerSection / 3f);
+
+			Vector2 adjustedReleaseDirection = new Vector2(Mathf.Cos(releaseAngle * Mathf.Deg2Rad), Mathf.Sin(releaseAngle * Mathf.Deg2Rad));
+			float releaseDistance = GetComponent<CircleCollider2D>().radius * transform.lossyScale.x + 
+									coinOrb.GetComponent<CircleCollider2D>().radius * transform.lossyScale.x;
+			Vector3 releasePosition = this.transform.position + (Vector3) adjustedReleaseDirection * releaseDistance;
+
+			GameObject orbObj;
+			if (Random.Range(0f, 1f) < bigOrbReleaseChance * 2f){
+				orbObj = Instantiate(coinOrbBig, releasePosition, Quaternion.identity);
+			}
+			else{
+				orbObj = Instantiate(coinOrb, releasePosition, Quaternion.identity);
+			}
+			 
+			orbObj.GetComponent<OrbScript>().SetBlastVelocity(adjustedReleaseDirection, 20f, 0.5f);
+		}
+	}
+
+
+	// helper function called on destruction, sends out a set number of coins around a certain direction
+	private void ReleaseCoinsToFollowPlayer(Vector3 playerDirection){
+		if (coinsToRelease == 0){
+			return;
+		}
+
+		// randomize the release angle for each coin and instantiate them with the right velocity
+		float startingAngle = TempGameManager.GetAngleFromVector(playerDirection);
+		float anglePerSection = 30f;
+		int bigOrbsAllowed = coinsToRelease / 2;
+		for (int i = 0; i < coinsToRelease; i++){
+			float releaseAngle = startingAngle + Mathf.Pow(-1, i) * (30 + Random.Range(0f, anglePerSection));
+
+			Vector2 adjustedReleaseDirection = new Vector2(Mathf.Cos(releaseAngle * Mathf.Deg2Rad), Mathf.Sin(releaseAngle * Mathf.Deg2Rad));
+			float releaseDistance = GetComponent<CircleCollider2D>().radius * transform.lossyScale.x + 
+									coinOrb.GetComponent<CircleCollider2D>().radius * transform.lossyScale.x;
+			Vector3 releasePosition = this.transform.position + (Vector3) adjustedReleaseDirection * releaseDistance;
+
+			GameObject orbObj;
+			if (bigOrbsAllowed > 0 && Random.Range(0f, 1f) < bigOrbReleaseChance){
+				orbObj = Instantiate(coinOrbBig, releasePosition, Quaternion.identity);
+				bigOrbsAllowed -= 1;
+			}
+			else{
+				orbObj = Instantiate(coinOrb, releasePosition, Quaternion.identity);
+			}
+			orbObj.GetComponent<OrbScript>().SetBlastVelocity(adjustedReleaseDirection, 25f, 0.2f);
+		}
+	}
+
 
 	public bool WillExplodeNext(){
 		return crackedState == maxCracks;
@@ -163,5 +265,19 @@ public class PlanetScript : MonoBehaviour {
 
 	public int GetPointValue(){
 		return pointValue;
+	}
+
+	public Vector2 GetPushForce(){
+		return pushForce;
+	}
+
+	public void SetLastInteractedObj(GameObject obj){
+		lastInteractedObj = obj;
+		StartCoroutine(ResetLastInteractedObj());
+	}
+
+	private IEnumerator ResetLastInteractedObj(){
+		yield return new WaitForSeconds(0.5f);
+		lastInteractedObj = null;
 	}
 }

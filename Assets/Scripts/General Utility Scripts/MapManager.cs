@@ -12,6 +12,7 @@ public class MapManager : MonoBehaviour {
 	private float lastSpawnAngle = 0f;
 
 	private Vector2 boundaries;
+	public float boundaryOffset;
 	private PlayerScript player;
 	private PlayerHUDScript playerHUD;
 
@@ -24,6 +25,10 @@ public class MapManager : MonoBehaviour {
 		playerHUD = GameObject.FindGameObjectWithTag("PlayerHUD").GetComponent<PlayerHUDScript>();
 	}
 
+	void Start(){
+		playerHUD.UpdatePlayerObj(player.gameObject);
+	}
+
 	void Update () {
 		if (!IsPlayerInBoundary() && !player.GetIsLanded()){
 			WarpPlayer();
@@ -31,9 +36,25 @@ public class MapManager : MonoBehaviour {
 	}
 
 
+	void OnTriggerExit2D(Collider2D other){
+		if (other.gameObject.tag == "Planet" && other.GetComponent<PlanetScript>().GetPushForce().magnitude > 1f){
+			PlanetScript planet = other.GetComponent<PlanetScript>();
+			planet.transform.position = GetWarpedPosition(planet.transform.position);
+			// clears the planet from player's interacted list if 
+			if (player.GetLastPlanet() == planet.gameObject){
+				player.ClearLastPlanet();
+			}
+		}
+		else if (other.gameObject.tag == "CoinOrb" && other.GetComponent<OrbScript>().GetBlastVelocity().magnitude > 1f){
+			other.gameObject.transform.position = GetWarpedPosition(other.gameObject.transform.position);
+		}
+	}
+
+
 	private bool IsPlayerInBoundary(){
 		Vector3 pos = player.transform.position;
-		if (pos.x > boundaries.x || pos.x < -boundaries.x || pos.y > boundaries.y || pos.y < -boundaries.y){
+		if (pos.x > boundaries.x + boundaryOffset || pos.x < -boundaries.x - boundaryOffset
+			 || pos.y > boundaries.y + boundaryOffset || pos.y < -boundaries.y - boundaryOffset){
 			return false;
 		}
 		else{
@@ -45,24 +66,7 @@ public class MapManager : MonoBehaviour {
 	// creates a new copy of the player at the new place and destroys the old one after a few seconds
 	// this is done to preserve the trail particle effect
 	private void WarpPlayer(){
-		// find whether or not the new warpped position will be inversed
-		Vector2 direction = player.GetComponent<Rigidbody2D>().velocity;
-		float angle = Mathf.Abs(Mathf.Atan(direction.x / direction.y) * Mathf.Rad2Deg);
-		int factor = 1;
-		if (angle > warpAngle && angle < 90 - warpAngle){
-			factor = -1;
-		}
-
-		// find the new warpped position
-		Vector3 newPos = player.transform.position;
-		if (newPos.x > boundaries.x)
-			newPos = new Vector3(-boundaries.x, factor * newPos.y, 0);
-		else if (newPos.x < -boundaries.x)
-			newPos = new Vector3(boundaries.x, factor * newPos.y, 0);
-		else if (player.transform.position.y > boundaries.y)
-			newPos = new Vector3(factor * newPos.x, -boundaries.y, 0);
-		else if (newPos.y < -boundaries.y)
-			newPos = new Vector3(factor * newPos.x, boundaries.y, 0);
+		Vector3 newPos = GetWarpedPosition(player.transform.position);
 
 		// clone the player and put the new one in the new position. destroy the old one in a few seconds
 		// this is done to preserve the trail effect
@@ -82,6 +86,33 @@ public class MapManager : MonoBehaviour {
 	private IEnumerator TimedDestroyObject(GameObject obj, float t){
 		yield return new WaitForSeconds(t);
 		Destroy(obj);
+	}
+
+
+	// helper function that finds the warped position of a given obj
+	private Vector3 GetWarpedPosition(Vector3 position){
+		// find whether or not the new warpped position will be inversed
+		int factor = 1;
+
+		Vector2 direction = player.GetComponent<Rigidbody2D>().velocity;
+		float angle = Mathf.Abs(Mathf.Atan(direction.x / direction.y) * Mathf.Rad2Deg);
+		if (angle > warpAngle && angle < 90 - warpAngle){
+			factor = -1;
+		}
+
+
+		// find the new warpped position
+		Vector3 newPos = position;
+		if (newPos.x > boundaries.x)
+			newPos = new Vector3(-boundaries.x, factor * newPos.y, 0);
+		else if (newPos.x < -boundaries.x)
+			newPos = new Vector3(boundaries.x, factor * newPos.y, 0);
+		else if (newPos.y > boundaries.y)
+			newPos = new Vector3(factor * newPos.x, -boundaries.y, 0);
+		else if (newPos.y < -boundaries.y)
+			newPos = new Vector3(factor * newPos.x, boundaries.y, 0);
+
+		return newPos;
 	}
 
 

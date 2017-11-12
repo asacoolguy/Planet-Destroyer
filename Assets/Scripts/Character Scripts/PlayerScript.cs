@@ -28,6 +28,7 @@ public abstract class PlayerScript : MonoBehaviour {
 	// new powerlevel stuff
 	public float maxChargeTime;
 	public float maxChargeSpeed;
+	public float maxSpeed;
 
 	// power up variables
 	private float powerupCountdown;
@@ -42,12 +43,13 @@ public abstract class PlayerScript : MonoBehaviour {
 	public float slowMotionKillSpeed = 0.03f; 
 	public float slowMotionKillDuration = 0.01f;
 
+	// tracking components
+	private Rigidbody2D myRigidBody;
 	protected PlayerAudioScript playerAudio;
 	protected TempGameManager gameManager;
 	protected TrailRenderer tail;
 
 	// score tracking variables
-	private int coinCombo;
 	public bool canGetPoints;
 
 	// specialAction timers
@@ -59,14 +61,19 @@ public abstract class PlayerScript : MonoBehaviour {
 	// planet pushing
 	public float planetPushSpeed;
 
+	// coin attraction 
+	public float coinAttractionRadius;
+	public float coinAttractionSpeed;
 
 
 	protected void Awake(){
 		playerAudio = GetComponent<PlayerAudioScript>();
 		initialPosition = transform.position;
 		initialRotation = transform.rotation.eulerAngles;
+		myRigidBody = GetComponent<Rigidbody2D>();
 		powerupEffect = transform.GetChild(0).GetComponent<PowerupEffectScript>();
 		tail = GetComponent<TrailRenderer>();
+		transform.Find("Orb Attractor").GetComponent<CircleCollider2D>().radius = coinAttractionRadius / transform.lossyScale.x;
 	}
 
 
@@ -75,7 +82,7 @@ public abstract class PlayerScript : MonoBehaviour {
 		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>();
 
 		// puts player in its initial state if it has no velocity aka it just respawned
-		if (GetComponent<Rigidbody2D>().velocity == Vector2.zero){
+		if (myRigidBody.velocity == Vector2.zero){
 			ResetPlayerStates();
 		}
 	}
@@ -86,7 +93,11 @@ public abstract class PlayerScript : MonoBehaviour {
 			if (tag == "Player"){
 				if (!isLanded){ 
 					// if player is drifting, it should move based on gravity from nearby planets and rotate to face forwards
-					GetComponent<Rigidbody2D>().velocity += CalculateGravityPull();
+					myRigidBody.velocity += CalculateGravityPull();
+					// limit player speed
+					if (myRigidBody.velocity.magnitude > maxSpeed){
+						myRigidBody.velocity = myRigidBody.velocity.normalized * maxSpeed;
+					}
 
 					// increment actionTimer and make it available if we pass the limit
 					if (!canAction && !actionTaken){
@@ -99,14 +110,16 @@ public abstract class PlayerScript : MonoBehaviour {
 				}
 				else{ 
 					// if player has landed, then it has no velocity and it should rotate to stand on the planet
-					GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+					myRigidBody.velocity = Vector2.zero;
+					StandOnCurrentPlanet();
+					RotateToCurrentPlanet();
 				}
 			}
 		}
 		else{ 
 			// if player is dead, decrease the countdown timer
 			respawnTimeCount -= Time.deltaTime;
-			this.gameObject.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+			myRigidBody.velocity = Vector2.zero;
 			transform.position = initialPosition;
 
 			if (respawnTimeCount < 0){
@@ -124,7 +137,7 @@ public abstract class PlayerScript : MonoBehaviour {
 	}
 
 	// when colliding with a planet, land on it if drifting, or switch planets if already on a planet
-	void OnTriggerEnter2D(Collider2D other) {
+	void OnCollisionEnter2D(Collision2D other) {
 		if ((other.gameObject.tag == "Planet" || other.gameObject.tag == "HomePlanet") && isDead == false) {
 			if (currentPlanet == null && isLanded == false){
 				LandOnPlanet(other.gameObject);
@@ -133,12 +146,12 @@ public abstract class PlayerScript : MonoBehaviour {
 				// make sure that enough time has passed since the last planet transfer or that this is a new planet
 				if (Time.time > lastPlanetTransferTime + 1f || lastPlanet != other.gameObject){ 
 					lastPlanet = currentPlanet;
-					currentPlanet = other.GetComponent<PlanetScript>();
+					currentPlanet = other.gameObject.GetComponent<PlanetScript>();
 					nearbyPlanets.Remove (currentPlanet.gameObject);
 					// set the player position and rotation accordingly
 					StandOnCurrentPlanet();
 					RotateToCurrentPlanet();
-					GetComponent<Rigidbody2D>().freezeRotation = true;
+					myRigidBody.freezeRotation = true;
 					transform.parent = currentPlanet.transform;
 
 					lastPlanetTransferTime = Time.time;
@@ -146,6 +159,16 @@ public abstract class PlayerScript : MonoBehaviour {
 			}
 		}
 	}
+
+
+	void OnTriggerEnter2D(Collider2D other){
+		if(other.gameObject.tag == "CoinOrb" && other.gameObject.GetComponent<OrbScript>().GetIsCollectable()){
+			gameManager.GetCoin(other.gameObject.GetComponent<OrbScript>().pointValue);
+			playerAudio.PlayOrbSound(0);
+			Destroy(other.gameObject);
+		}
+	}
+
 
 	// helper function that resets the player to initial drifting state
 	private void ResetPlayerStates(){
@@ -161,7 +184,6 @@ public abstract class PlayerScript : MonoBehaviour {
 		activatedPowerup = PowerupScript.PowerupType.none;
 		powerupCountdown = 0;
 		powerupEffect.DeactivateAllEffects();
-		coinCombo = 0;
 		transform.position = initialPosition; // TODO: need better method for respawn
 		transform.eulerAngles = initialRotation;
 		//powerLevel = powerLevelInitial;
@@ -180,7 +202,6 @@ public abstract class PlayerScript : MonoBehaviour {
 			StartCoroutine(EnableTail(false, 1f));
 
 			// clear coin combo
-			coinCombo = 0;
 			currentPlanet = planet.GetComponent<PlanetScript>();
 			playerAudio.PlayLandingSound();
 
@@ -188,7 +209,7 @@ public abstract class PlayerScript : MonoBehaviour {
 			StandOnCurrentPlanet();
 			RotateToCurrentPlanet();
 
-			GetComponent<Rigidbody2D>().freezeRotation = true;
+			myRigidBody.freezeRotation = true;
 			transform.parent = planet.transform;
 			nearbyPlanets.Remove (currentPlanet.gameObject);
 		}
@@ -207,8 +228,7 @@ public abstract class PlayerScript : MonoBehaviour {
 			StartCoroutine(EnableTail(true, 0f));
 			playerAudio.PlayLeavingSound();
 
-			Vector2 leavingAngle = new Vector2 (transform.position.x - currentPlanet.transform.position.x,
-			                            transform.position.y - currentPlanet.transform.position.y).normalized;
+			Vector2 leavingDirection = (Vector2)(transform.position - currentPlanet.transform.position).normalized;
             // TODO: check if applyForce is better
             float leavingSpeed = maxChargeSpeed * 2f / 3f;
             if (chargeTime >= maxChargeTime){
@@ -217,53 +237,32 @@ public abstract class PlayerScript : MonoBehaviour {
             if (activatedPowerup == PowerupScript.PowerupType.lighting){
             	leavingSpeed *= powerupSpeed;
             }
-			GetComponent<Rigidbody2D>().velocity = leavingAngle * leavingSpeed;
-			GetComponent<Rigidbody2D>().freezeRotation = false;
+			myRigidBody.velocity = leavingDirection * leavingSpeed;
+			myRigidBody.freezeRotation = false;
 
 			lastPlanet = currentPlanet;
 
 			// crack/destroy the planet if it's not the home planet
 			if (currentPlanet.tag != "HomePlanet"){
-				// if the planet will explode, get points
-				if (currentPlanet.WillExplodeNext()){
-					gameManager.IncrementScore(currentPlanet.GetPointValue(), this.transform.position);
-					gameManager.IncrementPlanetDestroyedCount(1);
-				}
-				else{ // if the planet will not explode, push it
+				// if the planet will not explode, push it 
+				if (!currentPlanet.WillExplodeNext()){
 					float pushSpeed = planetPushSpeed;
 					if (chargeTime >= maxChargeTime){
 						pushSpeed = planetPushSpeed * 3;
 					}
-					currentPlanet.PushPlanet(-leavingAngle, pushSpeed);
+					currentPlanet.PushPlanet(-leavingDirection, pushSpeed);
 				}
-
-				currentPlanet.SelfDestruct();
-				currentPlanet = null;
+				currentPlanet.TakeDamage(leavingDirection, true);
 			}
-			else { // otherwise just take off
-				currentPlanet = null;
-			}
+			currentPlanet = null;
 		}
 	}
 
 
 	// helper function that rotates the player to "stand on" the current planet
 	private void RotateToCurrentPlanet(){
-		float angle;
 		Vector3 difference = currentPlanet.transform.position - transform.position;
-
-		if (difference.x == 0) {
-			if (difference.y > 0)
-				angle = 0;
-			else{
-				angle = 180;
-			}
-		}
-		else{
-			angle =  Mathf.Atan2 (difference.y, difference.x) * Mathf.Rad2Deg + 90;
-		}
-
-		transform.eulerAngles = new Vector3 (0, 0, angle);
+		transform.eulerAngles = new Vector3 (0, 0, TempGameManager.GetAngleFromVector(difference) + 90);
 	}
 
 
@@ -276,24 +275,6 @@ public abstract class PlayerScript : MonoBehaviour {
 		transform.position = transform.position - difference + newDifference;
 	}
 
-	// helper function that rotates the player to face its moving direction
-	private void RotateToVelocity(){
-		float angle;
-		Vector2 direction = GetComponent<Rigidbody2D>().velocity;
-
-		if (direction.x == 0) {
-			if (direction.y > 0)
-				angle = 0;
-			else{
-				angle = 180;
-			}
-		}
-		else{
-			angle =  Mathf.Atan2 (direction.y, direction.x) * Mathf.Rad2Deg - 90;
-		}
-
-		transform.eulerAngles = new Vector3 (0, 0, angle);
-	}
 
 	// disable the player's components and starts the respawn timer
 	public void Suicide(){
@@ -354,16 +335,6 @@ public abstract class PlayerScript : MonoBehaviour {
 		}
 		
 		return final;
-	}
-
-	// function that the Orb object calls when it's been picked up by the player
-	// TODO rework this
-	public void AcquiredOrb(int orbValue, Vector3 orbPosition){
-		coinCombo += 1;
-		int gainedPts = orbValue *coinCombo;
-		//gameManager.IncrementScore(gainedPts);
-		//playerHUD.ShowFloatingText(gainedPts, orbPosition);
-		//playerAudio.PlayOrbSound(coinCombo);
 	}
 
 
@@ -439,6 +410,15 @@ public abstract class PlayerScript : MonoBehaviour {
 		return powerLevel;
 	}
 
+	public GameObject GetLastPlanet(){
+		if (lastPlanet == null){
+			return null;
+		}
+		else{
+			return lastPlanet.gameObject;
+		}
+	}
+
 	public Vector3 GetInitialPosition(){
 		return initialPosition;
 	}
@@ -481,7 +461,7 @@ public abstract class PlayerScript : MonoBehaviour {
 		actionTaken = oldPlayer.GetActionTaken();
 		currentActionTime = oldPlayer.GetCurrentActionTime();
 
-		GetComponent<Rigidbody2D>().velocity = oldPlayer.GetComponent<Rigidbody2D>().velocity;
+		myRigidBody.velocity = oldPlayer.GetComponent<Rigidbody2D>().velocity;
 		// powerup stuff
 		/*
 		activatedPowerup = PowerupScript.PowerupType.none;

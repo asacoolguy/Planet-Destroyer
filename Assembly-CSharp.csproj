@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
      <Compile Include="Assets\Scripts\Character Scripts\CaptainSpaceScript.cs" />
+     <Compile Include="Assets\Scripts\Character Scripts\OrbAttractionScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\PlayerAudioScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\PlayerScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\PowerupEffectScript.cs" />
@@ -60,6 +61,7 @@
      <Compile Include="Assets\Scripts\Planet scripts\OrbitScript.cs" />
      <Compile Include="Assets\Scripts\Planet scripts\PlanetGravityScript.cs" />
      <Compile Include="Assets\Scripts\Planet scripts\PlanetScript.cs" />
+     <Compile Include="Assets\Scripts\UI Scripts\ComboTextScript.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\MainMenuScript.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\PlayerHUDScript.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\PostGameNotifier.cs" />
