@@ -11,7 +11,7 @@ public class PlayerHUDScript : MonoBehaviour {
 
 	private Slider slider;
 	private Text scoreText, difficultyText, coinText;
-	private Button jumpButton, actionButton;
+	private Button jumpButton, actionButton, pauseButton;
 
 	public bool isHUDActive;
 
@@ -22,12 +22,15 @@ public class PlayerHUDScript : MonoBehaviour {
 
 	void Awake () {
 		// sets up all the GUI elements
-		scoreText = transform.Find("Top Bar").Find("Score").gameObject.GetComponent<Text>();
-		difficultyText = transform.Find("Top Bar").Find("Difficulty").gameObject.GetComponent<Text>();
-		coinText = transform.Find("Top Bar").Find("Coin").gameObject.GetComponent<Text>();
-		slider = transform.Find("Power Slider").gameObject.GetComponent<Slider>();
-		jumpButton = transform.Find("Jump Button").gameObject.GetComponent<Button>();
-		actionButton = transform.Find("Action Button").gameObject.GetComponent<Button>();
+		scoreText = transform.Find("Top Bar").Find("Score").GetComponent<Text>();
+		difficultyText = transform.Find("Top Bar").Find("Difficulty").GetComponent<Text>();
+		coinText = transform.Find("Top Bar").Find("Coin").GetComponent<Text>();
+		pauseButton = transform.Find("Top Bar").Find("Pause Button").GetComponent<Button>();
+		pauseButton.onClick.AddListener(() => GameManager.instance.OnPauseButtonClick());
+
+		slider = transform.Find("Power Slider").GetComponent<Slider>();
+		jumpButton = transform.Find("Jump Button").GetComponent<Button>();
+		actionButton = transform.Find("Action Button").GetComponent<Button>();
 		UpdatePlayerObj(GameObject.FindGameObjectWithTag("Player"));
 
 		jumpButtonHeld = false;
@@ -39,9 +42,6 @@ public class PlayerHUDScript : MonoBehaviour {
 
 	}
 
-	void Start(){
-
-	}
 
 	// Update is called once per frame
 	void Update () {
@@ -69,6 +69,17 @@ public class PlayerHUDScript : MonoBehaviour {
 		if (jumpButtonHeld && jumpButtonHeldMaxedOut == false && jumpButtonHeldTime > slider.maxValue){
 			jumpButtonHeldMaxedOut = true;
 			playerAudio.PlayMaxedChargingSound();
+		}
+
+
+		if (Input.GetKeyDown(KeyCode.Z)){
+			StartJumpButtonPress();
+		}
+		if (Input.GetKeyUp(KeyCode.Z)){
+			EndJumpButtonPress();
+		}
+		if (Input.GetKeyDown(KeyCode.X)){
+			OnActionButtonPress();
 		}
 
 	}
@@ -104,7 +115,9 @@ public class PlayerHUDScript : MonoBehaviour {
 	}
 
 	public void OnActionButtonPress(){
-		player.ActivatePlayerAction();
+		if (isHUDActive && player.GetCanAction()){
+			player.ActivatePlayerAction();
+		}
 	}
 
 	public void EnableJumpButtonInteraction(bool b){
@@ -151,6 +164,7 @@ public class PlayerHUDScript : MonoBehaviour {
 
 	public void SetIsHUDActive(bool b){
 		isHUDActive = b;
+		pauseButton.interactable = b;
 	}
 
 	public void SetObjectiveString(string s){

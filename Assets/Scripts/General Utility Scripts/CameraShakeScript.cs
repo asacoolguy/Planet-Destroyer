@@ -25,11 +25,11 @@ public class CameraShakeScript : MonoBehaviour {
 	}
 
 	IEnumerator Shake(float intensity, float duration){
-		float countdown = duration;
-		while (countdown > 0){
+		float countdown = Time.realtimeSinceStartup + duration;
+		while (Time.realtimeSinceStartup < countdown){
 			Vector2 rotation = Random.insideUnitCircle * intensity;
 			//countdown = Mathf.Lerp(countdown, 0, Time.deltaTime);
-			countdown -= Time.deltaTime;
+			//countdown -= Time.deltaTime;
 
 			transform.localRotation = Quaternion.Euler(new Vector3(rotation.x, rotation.y, 0));
 			yield return null;

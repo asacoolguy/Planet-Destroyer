@@ -46,7 +46,7 @@ public abstract class PlayerScript : MonoBehaviour {
 	// tracking components
 	private Rigidbody2D myRigidBody;
 	protected PlayerAudioScript playerAudio;
-	protected TempGameManager gameManager;
+	protected GameManager gameManager;
 	protected TrailRenderer tail;
 
 	// score tracking variables
@@ -60,6 +60,8 @@ public abstract class PlayerScript : MonoBehaviour {
 
 	// planet pushing
 	public float planetPushSpeed;
+
+	public float homePlanetRotationSpeed;
 
 	// coin attraction 
 	public float coinAttractionRadius;
@@ -79,7 +81,7 @@ public abstract class PlayerScript : MonoBehaviour {
 
 	protected void Start () {
 		cameraShaker = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraShakeScript>();
-		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>();
+		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
 
 		// puts player in its initial state if it has no velocity aka it just respawned
 		if (myRigidBody.velocity == Vector2.zero){
@@ -163,7 +165,7 @@ public abstract class PlayerScript : MonoBehaviour {
 
 	void OnTriggerEnter2D(Collider2D other){
 		if(other.gameObject.tag == "CoinOrb" && other.gameObject.GetComponent<OrbScript>().GetIsCollectable()){
-			gameManager.GetCoin(other.gameObject.GetComponent<OrbScript>().pointValue);
+			gameManager.CollectCoin(other.gameObject.GetComponent<OrbScript>().pointValue);
 			playerAudio.PlayOrbSound(0);
 			Destroy(other.gameObject);
 		}
@@ -212,6 +214,11 @@ public abstract class PlayerScript : MonoBehaviour {
 			myRigidBody.freezeRotation = true;
 			transform.parent = planet.transform;
 			nearbyPlanets.Remove (currentPlanet.gameObject);
+
+			// TODO: clean this up
+			if (currentPlanet.gameObject.tag == "HomePlanet" && currentPlanet.rotationSpeed != homePlanetRotationSpeed){
+				currentPlanet.rotationSpeed = homePlanetRotationSpeed;
+			}
 		}
 		else{
 			print("Error: cannot land on " + planet.name);
@@ -262,7 +269,7 @@ public abstract class PlayerScript : MonoBehaviour {
 	// helper function that rotates the player to "stand on" the current planet
 	private void RotateToCurrentPlanet(){
 		Vector3 difference = currentPlanet.transform.position - transform.position;
-		transform.eulerAngles = new Vector3 (0, 0, TempGameManager.GetAngleFromVector(difference) + 90);
+		transform.eulerAngles = new Vector3 (0, 0, GameManager.GetAngleFromVector(difference) + 90);
 	}
 
 

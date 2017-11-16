@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class MainMenuScript : MonoBehaviour {
-	public GameObject stageSelectionBox;
+	//public GameObject stageSelectionBox;
 	public GameObject mainMenuBox;
 
-	private GameManager gameManager;
-
 	// Use this for initialization
-	void Awake () {
-		HideStageSelectionBox();
-		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
+	void Start () {
+		//HideStageSelectionBox();
+		MusicManager.instance.PlayMainMenuMusic();
 	}
 	
 	// Update is called once per frame
@@ -20,21 +18,27 @@ public class MainMenuScript : MonoBehaviour {
 	}
 
 	public void ShowStageSelectionBox(){
-		stageSelectionBox.SetActive(true);
+		//stageSelectionBox.SetActive(true);
 		mainMenuBox.SetActive(false);
 	}
 
 	public void HideStageSelectionBox(){
-		stageSelectionBox.SetActive(false);
+		//stageSelectionBox.SetActive(false);
 		mainMenuBox.SetActive(true);
 	}
 
-	// give GameManager the info needed to run galaxy 1
-	public void LoadGalaxyOne(){
-		string[] mapNames = new string[3];
-		mapNames[0] = "Coin Intro";
-		mapNames[1] = "Planet Intro";
-		mapNames[2] = "Warp Intro";
-		gameManager.StartGalaxy(3, mapNames);
+	// give tell gameManager to start the game
+	public void LoadGame(){
+		GameManager.instance.LoadGame();
+	}
+
+
+	public void LoadUpgrade(){
+		GameManager.instance.LoadUpgrade();
+	}
+
+
+	public void ClearData(){
+		GameManager.instance.ClearData();
 	}
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
+/// Contains info about the current map.
 /// Handles enemy spawning and player warping
 /// </summary>
 public class MapManager : MonoBehaviour {
@@ -27,6 +28,10 @@ public class MapManager : MonoBehaviour {
 
 	void Start(){
 		playerHUD.UpdatePlayerObj(player.gameObject);
+		MusicManager.instance.PlayGameMusic();
+		GameManager.instance.InitialSetup();
+		PlayerUpgrader.ApplyPlayerUpgrades(ref player);
+		GameManager.instance.StartGameLoop();
 	}
 
 	void Update () {
@@ -74,7 +79,9 @@ public class MapManager : MonoBehaviour {
 		GameObject newPlayerObj = Instantiate(oldPlayerObj, newPos, oldPlayerObj.transform.rotation);
 		player = newPlayerObj.GetComponent<PlayerScript>();
 		player.GetDataFromOldPlayer(oldPlayerObj.GetComponent<PlayerScript>());
+		player.gameObject.name = "Player1";
 		oldPlayerObj.tag = "Untagged";
+		oldPlayerObj.name = "OldPlayer1";
 		playerHUD.UpdatePlayerObj(newPlayerObj);
 
 		StartCoroutine(TimedDestroyObject(oldPlayerObj, 5f));
@@ -117,7 +124,7 @@ public class MapManager : MonoBehaviour {
 
 
 	// spawns a random planet at a random place that's a set distance away from the last spawnpoint
-	public void SpawnPlanet(int i){
+	public void SpawnPlanet(int i, float planetSpeed){
 		float spawnAngle = (lastSpawnAngle + Random.Range(30, 330)) % 360f;
 		lastSpawnAngle = spawnAngle;
 
@@ -155,7 +162,8 @@ public class MapManager : MonoBehaviour {
 			yPos = -boundaries.y + planetRadius;
 		}
 
-		Instantiate(planet, new Vector3(xPos, yPos, 0), Quaternion.identity);
+		GameObject obj = Instantiate(planet, new Vector3(xPos, yPos, 0), Quaternion.identity);
+		GameManager.instance.ChangePlanetsOnScreenCount(1);
 	}
 
 }

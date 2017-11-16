@@ -55,7 +55,8 @@
      <Compile Include="Assets\Scripts\General Utility Scripts\GameManager.cs" />
      <Compile Include="Assets\Scripts\General Utility Scripts\MapManager.cs" />
      <Compile Include="Assets\Scripts\General Utility Scripts\MusicManager.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\TempGameManager.cs" />
+     <Compile Include="Assets\Scripts\General Utility Scripts\OldGameManager.cs" />
+     <Compile Include="Assets\Scripts\General Utility Scripts\PlayerUpgrader.cs" />
      <Compile Include="Assets\Scripts\Pick-up Scripts\OrbScript.cs" />
      <Compile Include="Assets\Scripts\Pick-up Scripts\PowerupScript.cs" />
      <Compile Include="Assets\Scripts\Planet scripts\OrbitScript.cs" />
@@ -67,6 +68,7 @@
      <Compile Include="Assets\Scripts\UI Scripts\PostGameNotifier.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\PreGameNotifier.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\TournamentProgress.cs" />
+     <Compile Include="Assets\Scripts\Upgrade Screen Scripts\UpgradePanel.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>D:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>

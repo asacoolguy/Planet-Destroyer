@@ -32,14 +32,12 @@ public class PlanetScript : MonoBehaviour {
 	public Sprite regular, cracked1, cracked2, explosion;
 	public AudioClip explodeSound, crackSound1, crackSound2;
 	private CameraShakeScript cameraShaker;
-	private TempGameManager gameManager;
 
 	void Start () {
 		isDestroyed = false;
 		crackedState = 0;
 		gravityField = transform.GetChild(0).GetComponent<PlanetGravityScript>();
 		cameraShaker = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<CameraShakeScript>();
-		gameManager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>();
 
 		pushForce = Vector2.zero;
 		collidedAfterPush = false;
@@ -68,7 +66,7 @@ public class PlanetScript : MonoBehaviour {
 	void OnCollisionEnter2D(Collision2D other) {
 		// if this is homeplanet and it collided with a normal planet, game over
 		if (this.tag == "HomePlanet" && other.gameObject.tag == "Planet") {
-			GameObject.FindGameObjectWithTag("GameManager").GetComponent<TempGameManager>().StopGameRunning();
+			GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>().StopGameRunning();
 		}
 		// if this is a planet-planet collision, the current planet is being moved by pushForce and the two planet havent just interacted with each other
 		else if(this.tag == "Planet" && other.gameObject.tag == "Planet" && pushForce != Vector2.zero && other.gameObject != lastInteractedObj){
@@ -128,7 +126,7 @@ public class PlanetScript : MonoBehaviour {
 		if (crackedState > maxCracks){
 			crackedState = -1;
 			StartCoroutine(SelfDestructHelper());
-			gameManager.IncrementScore(pointValue, this.transform.position);
+			GameManager.instance.IncrementScore(pointValue, this.transform.position);
 
 			if (damageFromTakeOff){
 				ReleaseCoinsToFollowPlayer(damageDirection);
@@ -171,6 +169,8 @@ public class PlanetScript : MonoBehaviour {
 		while (gameObject.GetComponent<AudioSource> ().isPlaying){
 			yield return null;
 		}
+
+		GameManager.instance.ChangePlanetsOnScreenCount(-1);
 		Destroy(this.gameObject);
 	}
 
@@ -201,7 +201,7 @@ public class PlanetScript : MonoBehaviour {
 		}
 
 		// randomize the release angle for each coin and instantiate them with the right velocity
-		float startingAngle = TempGameManager.GetAngleFromVector(releaseDirection) - 90f;
+		float startingAngle = GameManager.GetAngleFromVector(releaseDirection) - 90f;
 		float anglePerSection = 180f / coinsToRelease;
 		for (int i = 0; i < coinsToRelease; i++){
 			float releaseAngle = startingAngle + anglePerSection * i + Random.Range(-anglePerSection / 3f, anglePerSection / 3f);
@@ -231,7 +231,7 @@ public class PlanetScript : MonoBehaviour {
 		}
 
 		// randomize the release angle for each coin and instantiate them with the right velocity
-		float startingAngle = TempGameManager.GetAngleFromVector(playerDirection);
+		float startingAngle = GameManager.GetAngleFromVector(playerDirection);
 		float anglePerSection = 30f;
 		int bigOrbsAllowed = coinsToRelease / 2;
 		for (int i = 0; i < coinsToRelease; i++){

@@ -2,6 +2,9 @@
 using System.Collections;
 
 public class MusicManager : MonoBehaviour {
+	public AudioClip mainMenuMusic, gameMusic, upgradeMusic;
+	private AudioSource myAudioSource;
+
 	private static MusicManager _instance;
 
 	public static MusicManager instance{
@@ -11,7 +14,7 @@ public class MusicManager : MonoBehaviour {
 				DontDestroyOnLoad(_instance.gameObject);
 			}
 
-			return instance;
+			return _instance;
 		}
 	}
 
@@ -24,19 +27,33 @@ public class MusicManager : MonoBehaviour {
 			if (this != _instance)
 				Destroy(this.gameObject);
 		}
+
+		myAudioSource = GetComponent<AudioSource>();
 	}
 
 	public void Play(){
 		GetComponent<AudioSource> ().Play ();
 	}
 
-	// Use this for initialization
-	void Start () {
-	
+	public void PlayMainMenuMusic(){
+		myAudioSource.clip = mainMenuMusic;
+		myAudioSource.Play();
 	}
-	
-	// Update is called once per frame
-	void Update () {
-	
+
+
+	public void PlayGameMusic(){
+		if (myAudioSource.clip != gameMusic || !myAudioSource.isPlaying){
+			myAudioSource.clip = gameMusic;
+			myAudioSource.Play();
+		}
 	}
+
+
+	public void PlayUpgradeMusic(){
+		if (myAudioSource.clip != upgradeMusic || !myAudioSource.isPlaying){
+			myAudioSource.clip = upgradeMusic;
+			myAudioSource.Play();
+		}
+	}
+
 }

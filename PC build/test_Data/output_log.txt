@@ -1,0 +1,41 @@
+Initialize engine version: 5.5.5p1 (8a9b2336c562)
+GfxDevice: creating device client; threaded=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: NVIDIA GeForce 940M (ID=0x1347)
+    Vendor:   NVIDIA
+    VRAM:     2020 MB
+    Driver:   21.20.16.4550
+Begin MonoManager ReloadAssembly
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll (this message is harmless)
+Loading D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll into Unity Child Domain
+- Completed reload, in  0.303 seconds
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: D:\UnityProjects\Planet Destroyers\PC build\test_Data\Managed\System.dll (this message is harmless)
+<RI> Initializing input.
+<RI> Input initialized.
+desktop: 3200x1800 60Hz; virtual: 3200x1800 at 0,0
+<RI> Initialized touch support.
+UnloadTime: 1.300540 ms
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 4.941025 ms
+
+Unloading 6 unused Assets to reduce memory usage. Loaded Objects now: 502.
+Total: 0.414813 ms (FindLiveObjects: 0.030419 ms CreateObjectMapping: 0.016987 ms MarkObjects: 0.356739 ms  DeleteObjects: 0.010271 ms)
+
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 0.996343 ms
+
+Unloading 25 unused Assets to reduce memory usage. Loaded Objects now: 657.
+Total: 0.606023 ms (FindLiveObjects: 0.036345 ms CreateObjectMapping: 0.027654 ms MarkObjects: 0.363060 ms  DeleteObjects: 0.178567 ms)
+
+Setting up 1 worker threads for Enlighten.
+  Thread -> id: 3ab0 -> priority: 1 

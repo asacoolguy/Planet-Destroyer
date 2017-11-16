@@ -1,251 +1,326 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Overall manager of the entire game. Handles scene loading and game states.
-/// </summary>
-public class GameManager : MonoBehaviour {	
-	// singleton behavior
-	public static GameManager instance = null;
-	private bool gameLooping;
-
-	// UI stuff
-	private PlayerHUDScript player1HUD, player2HUD;
-	private PreGameNotifier preGameNotifier;
-	private PostGameNotifier postGameNotifier;
-	private TournamentProgress tournamentProgress;
-	private PlayerScript player1, player2;
-
-	// timer
-	private float timeLimit;
-	private float timeLeft;
-
-	// tournament info
-	[SerializeField]private string[] mapNames;
-	private int currentMapIndex;
-	[SerializeField]private int roundsRequiredToWin;
-	private int currentRound;
-	[SerializeField]private int player1WinCount, player2WinCount;
-
-	// getting this map's info
+public class GameManager : MonoBehaviour {
+	private GameObject notificationObj, pauseBoxObj, difficultyIncreaseText;
+	private float score;
+	private int planetDestroyedCount, planetCombo, maxPlanetCombo;
+	private int coinsCollected;
+	public float comboFadeTime;
+	private float currentComboFadeTime;
+	private PlayerHUDScript playerHUD;
+	private ComboTextScript comboText;
 	private MapManager mapManager;
 
-	// developer tools
-	public bool showPreNotification = true;
-	public bool showPostNotification = true;
+	private int difficulty;
+	private bool canSpawn = true;
+	private bool gamePaused = false;
+	[SerializeField]private int planetsOnScreenCount;
+
+	public AudioClip gameOverSound, difficultyIncreaseSound;
+
+
+	// singleton behavior
+	private static GameManager _instance;
+	public static GameManager instance{
+		get{
+			if (_instance == null){
+				_instance = GameObject.FindObjectOfType<GameManager>();
+				DontDestroyOnLoad(_instance.gameObject);
+			}
+
+			return _instance;
+		}
+	}
+
+
+	private bool gameRunning;
 
 	void OnEnable(){
-		//SceneManager.sceneLoaded += OnSceneFinishedLoading;
+		SceneManager.sceneLoaded += OnSceneFinishedLoading;
 	}
 
 	void OnDisable(){
-		//SceneManager.sceneLoaded -= OnSceneFinishedLoading;
+		SceneManager.sceneLoaded -= OnSceneFinishedLoading;
 	}
 
 	void Awake () {
-		// makes this into a singleton
-		if (instance == null){
-			instance = this;
-		}
-		else if(instance != this){
-			Destroy(gameObject);
-		}
-		DontDestroyOnLoad(gameObject);
-
-		// initiate the GameState
-		//gameState = GameState.MainMenu;
-		gameLooping = false;
-	}
-
-	void Update () {
-
-
-	}
-
-	// loop that is run once on every map
-	private IEnumerator GameLoop(){
-		if (gameLooping == false){
-			gameLooping = true;
-
-			// show this map's objective before the game starts
-			if (showPreNotification)
-				yield return StartCoroutine(ShowGameObjective());
-
-			// run the game 
-			yield return StartCoroutine(RunGame());
-
-			// end the game, show results 
-			if (showPostNotification)
-				yield return StartCoroutine(GameOver());
+		if (_instance == null){
+			_instance = this;
+			DontDestroyOnLoad(this);
 		}
 		else{
-			Debug.Log("error: gameloop cannot start because game is already looping!");
+			if (this != _instance)
+				Destroy(this.gameObject);
 		}
 	}
 
-	// coroutine that shows the round's objects before the round starts
-	private IEnumerator ShowGameObjective(){
-		player1HUD.GetComponent<PlayerHUDScript>().SetIsHUDActive(false);
-		player2HUD.GetComponent<PlayerHUDScript>().SetIsHUDActive(false);
-
-		// TODO: improve animation for showing objectives
-		// initial wait for player to orient themselves with the map 
-		yield return new WaitForSeconds(0.5f);
-
-		//preGameNotifier.SetUpText(currentRound, mapManager.GetPreGameObjectiveText());
-
-		yield return StartCoroutine(preGameNotifier.DisplayNotification());
-
-		yield return StartCoroutine(preGameNotifier.HideNotification());
-		yield return StartCoroutine(preGameNotifier.DisplayCountdown());
+	void Start(){
+		
 	}
 
 
-	private IEnumerator RunGame(){
-		player1HUD.GetComponent<PlayerHUDScript>().SetIsHUDActive(true);
-		player2HUD.GetComponent<PlayerHUDScript>().SetIsHUDActive(true);
-		player1.SetCanGetPoints(true);
-		player2.SetCanGetPoints(true);
+	// main game loop that carries the game through its states
+	private IEnumerator GameLoop(){
+		// run the game 
+		yield return StartCoroutine(RunGame());
 
-		while(timeLeft > 0){
-			// decrease the timer
-			timeLeft -= Time.deltaTime;
-			//player1HUD.GetComponent<PlayerHUDScript>().UpdateTimerText(timeLeft);
-			//player2HUD.GetComponent<PlayerHUDScript>().UpdateTimerText(timeLeft);
+		yield return StartCoroutine(GameOver());
+	}
+
+
+	// game running state. spawn enemies and raise difficulty accordingly
+	private IEnumerator RunGame(){
+		playerHUD.SetIsHUDActive(true);
+		playerHUD.UpdateDifficultyText(difficulty);
+		gameRunning = true;
+
+		while (gameRunning){
+			// spawn planets based on difficulty
+			if (canSpawn){
+				int r = 0;
+				float waitTime = 6f;
+				float speed = 0.3f;
+				if (difficulty == 1){
+					r = Random.Range(0, 2);
+					waitTime = 6f;
+					speed = 0.3f;
+					StartCoroutine(SpawnPlanet(Random.Range(0, difficulty), waitTime, speed));
+				}
+				else if(difficulty == 2){
+					r = Random.Range(0, 3);
+					waitTime = 5f;
+					speed = 0.3f;
+					StartCoroutine(SpawnPlanet(Random.Range(0, difficulty), waitTime, speed));
+				}
+				else if(difficulty == 3){
+					r = Random.Range(0, 3);
+					waitTime = 4f;
+					speed = 0.4f;
+					StartCoroutine(SpawnPlanet(Random.Range(0, difficulty), waitTime, speed));
+				}
+				else if(difficulty > 3){
+					r = Random.Range(0, 3);
+					waitTime = 3.5f;
+					speed = 0.5f;
+					StartCoroutine(SpawnPlanet(Random.Range(0, difficulty), waitTime, speed));
+				}
+			}
+
+			// raise difficulty based on planets destoryed
+			if (planetDestroyedCount >= 10 && planetDestroyedCount < 25){
+				difficulty = 2;
+				playerHUD.UpdateDifficultyText(difficulty);
+
+			}
+			else if (planetDestroyedCount >= 25){
+				difficulty = (planetDestroyedCount - 25) / 20 + 3;
+				playerHUD.UpdateDifficultyText(difficulty);
+			}
+
+
+			if (currentComboFadeTime > 0){
+				currentComboFadeTime -= Time.deltaTime;
+			}
+			else{
+				planetCombo = 0;
+			}
+
 			yield return null;
 		}
 	}
 
+
+	// game over state. show game over screen and result screen
 	private IEnumerator GameOver(){
-		// disable controls
-		player1HUD.GetComponent<PlayerHUDScript>().SetIsHUDActive(false);
-		player2HUD.GetComponent<PlayerHUDScript>().SetIsHUDActive(false);
+		GetComponent<AudioSource>().PlayOneShot(gameOverSound);
+		Time.timeScale = 0;
+		notificationObj.SetActive(true);
 
-		player1.SetCanGetPoints(true);
-		player2.SetCanGetPoints(false);
-
-		// find the winner
-		// TODO: for now score is king. when other win conditions come in, move this code elsewhere
-		//PlayerScript winner = null; 
-		//if (player1.GetScore() > player2.GetScore()){
-		//	winner = player1;
-		//}
-		//else if(player2.GetScore() > player1.GetScore()){
-		//	winner = player2;
-		//}
-
-		// show the game over text first
-		yield return StartCoroutine(postGameNotifier.DisplayGameOverText());
-
-		// give info to postGameNotifier
-		//postGameNotifier.SetUpText(mapManager.GetPostGameObjectiveText(), player1.GetScore(), player2.GetScore(), winner);
-
-		// display the results of the game
-		yield return StartCoroutine(postGameNotifier.DisplayNotification());
-
-		yield return new WaitForSeconds(2f);
-
-		// hide the results and show tournament progress
-		postGameNotifier.TransitionOut();
-		//tournamentProgress.SetUpScoreBars(player1.GetWinCount(), player2.GetWinCount());
-		tournamentProgress.TransitionIn();
-
-		yield return new WaitForSeconds(2f);
-
-		// increment the winCount of the player and show it with the bar scores
-		//tournamentProgress.IncrementWinnerScoreBar(winner);
-
-		yield return new WaitForSeconds(2f);
-
-		/*
-		// if a player has won the tournament, display tournament results
-		if (Mathf.Max(player1.GetWinCount(), player2.GetWinCount()) >= roundsRequiredToWin){
-			// TODO: make a nice tournament results menu
-			if (player1.GetWinCount() > player2.GetWinCount()){
-				tournamentProgress.ShowTournamentWinner(player1);
-			}
-			else{
-				tournamentProgress.ShowTournamentWinner(player2);
-			}
-			yield return new WaitForSeconds(5f);
-
-			gameLooping = false;
-			SceneManager.LoadScene("Main Menu");
+		string scoreString = "Score: " + Mathf.RoundToInt(score);
+		if (score > PlayerPrefs.GetFloat("HighScore")){
+			scoreString = "<color=#" + ColorUtility.ToHtmlStringRGB(Color.red) + ">New High Score: " + Mathf.RoundToInt(score) + "</color>";
+			PlayerPrefs.SetFloat("HighScore", score);
 		}
-		// otherwise the tournament keeps going
-		else{
-			// countdown to the next map
-			//yield return StartCoroutine(postGameNotifier.CountDownToNextMap());
 
-			// log down the winCount of the players
-			player1WinCount = player1.GetWinCount();
-			player2WinCount = player2.GetWinCount();
+		PlayerPrefs.SetInt("TotalCoins", coinsCollected + PlayerPrefs.GetInt("TotalCoins"));
 
-			gameLooping = false;
+		notificationObj.transform.Find("Score Text").GetComponent<Text>().text = scoreString ;
+		notificationObj.transform.Find("Combo Text").GetComponent<Text>().text = "Max Combo: " + maxPlanetCombo;
+		notificationObj.transform.Find("Coin Text").GetComponent<Text>().text = "Coins Collected: " + coinsCollected;
 
-			// load the next map
-			currentMapIndex += 1;
-			// if we are on the last map 
-			LoadMap(mapNames[currentMapIndex % mapNames.Length]);
-		}
-		*/
+		playerHUD.SetIsHUDActive(false);
+
+		gameRunning = false;
+
+		yield return null;	
 	}
+
+
+	private IEnumerator SpawnPlanet(int i, float waitTime, float speed){
+		mapManager.SpawnPlanet(i, speed);
+		canSpawn = false;
+
+		yield return new WaitForSeconds (waitTime);
+		canSpawn = true;
+	}
+
+
+	public void LoadGame(){
+		SceneManager.LoadScene("Planet Defense");
+	}
+
+	public void LoadMainMenu(){
+		SceneManager.LoadScene("Main Menu");
+	}
+
+	public void LoadUpgrade(){
+		SceneManager.LoadScene("Upgrade");
+	}
+
+
+	public void StopGameRunning(){
+		gameRunning = false;
+	}
+
 
 	// runs when the scene is loaded, sets up variables for this scene
-	/*
 	private void OnSceneFinishedLoading(Scene scene, LoadSceneMode mode){
 		// make sure not to run this function for the main menu scene
-		if (scene.name != "Main Menu"){
-			//this.gameState = GameState.PreGameHint;
+		Time.timeScale = 1;
+	}
 
-			// find the local mapManager
-			mapManager = GameObject.FindGameObjectsWithTag("MapManager")[0].GetComponent<MapManager>();
-			// get player elements from mapManager
-			player1 = mapManager.player1.GetComponent<PlayerScript>();
-			// get UI elements from mapManager
-			player1HUD = mapManager.gameCanvas.transform.Find("Player1 HUD").GetComponent<PlayerHUDScript>();
-			player2HUD = mapManager.gameCanvas.transform.Find("Player2 HUD").GetComponent<PlayerHUDScript>();
-			player1HUD.SetObjectiveString(mapManager.GetPostGameObjectiveText());
-			player2HUD.SetObjectiveString(mapManager.GetPostGameObjectiveText());
-			preGameNotifier = mapManager.gameCanvas.transform.Find("PreGame Notification").GetComponent<PreGameNotifier>();
-			postGameNotifier = mapManager.gameCanvas.transform.Find("PostGame Notification").GetComponent<PostGameNotifier>();
-			tournamentProgress = mapManager.gameCanvas.transform.Find("Tournament Progress").GetComponent<TournamentProgress>();
-			// get Map info from mapManager
-			timeLimit = mapManager.timeLimit;
-			timeLeft = timeLimit;	
-			// increase round 
-			currentRound += 1;
+	public void InitialSetup(){
+		gameRunning = false;
+		difficulty = 1;
+		score = 0f;
+		coinsCollected = 0;
+		planetCombo = 0;
+		maxPlanetCombo = 0;
+		planetDestroyedCount = 0;
+		planetsOnScreenCount = 0;
+		mapManager = GameObject.FindObjectOfType<MapManager>();
+		GameObject canvas = GameObject.FindGameObjectWithTag("GameCanvas");
+		playerHUD = canvas.transform.Find("Player HUD").GetComponent<PlayerHUDScript>();
+		comboText = canvas.transform.Find("Combo Text").GetComponent<ComboTextScript>();
 
+		notificationObj = canvas.transform.Find("Notification").gameObject;
+		notificationObj.SetActive(false);
+		notificationObj.transform.Find("Restart Button").GetComponent<Button>().onClick.AddListener(() => LoadGame());
+		notificationObj.transform.Find("Upgrades Button").GetComponent<Button>().onClick.AddListener(() => LoadUpgrade());
+		notificationObj.transform.Find("Main Menu Button").GetComponent<Button>().onClick.AddListener(() => LoadMainMenu());
+
+		pauseBoxObj = canvas.transform.Find("Pause Box").gameObject;
+		pauseBoxObj.SetActive(false);
+		pauseBoxObj.transform.Find("Resume Button").GetComponent<Button>().onClick.AddListener(() => OnPauseButtonClick());
+		pauseBoxObj.transform.Find("Restart Button").GetComponent<Button>().onClick.AddListener(() => LoadGame());
+		pauseBoxObj.transform.Find("Upgrades Button").GetComponent<Button>().onClick.AddListener(() => LoadUpgrade());
+		pauseBoxObj.transform.Find("Main Menu Button").GetComponent<Button>().onClick.AddListener(() => LoadMainMenu());
+		gamePaused = false;
+
+		difficultyIncreaseText = canvas.transform.Find("Difficulty Increase Text").gameObject;
+		difficultyIncreaseText.SetActive(false);
+
+		playerHUD.SetIsHUDActive(false);
+	}
+
+
+	public void StartGameLoop(){
+		if (!gameRunning){
 			StartCoroutine(GameLoop());
 		}
-	}
-	*/
-
-	// resets this map
-	public void ResetMap(){
-		SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-	}
-
-	public void LoadMap(string sceneName){
-		if (gameLooping == false){
-			SceneManager.LoadScene(sceneName);
+		else{
+			Debug.Log("Error: game loop cannot start because game is already running!");
 		}
 	}
 
-	// called by Main Menu to start a certain tournament, given all the required info
-	public void StartGalaxy(int roundsRequired, string[] mapNames){
-		if (gameLooping == false){
-			roundsRequiredToWin = roundsRequired;
-			currentRound = 0;
-			player1WinCount = 0;
-			player2WinCount = 0;
 
-			this.mapNames = mapNames;
-			currentMapIndex = 0;
+	public void IncrementScore(int value, Vector3 position){
+		currentComboFadeTime = comboFadeTime;
+		planetCombo += 1;
+		maxPlanetCombo = Mathf.Max(planetCombo, maxPlanetCombo);
 
-			LoadMap(this.mapNames[currentMapIndex]);
+		float newValue = value;
+		if (planetCombo > 2){
+			comboText.PlayIncreaseCombosAnimation();
+			comboText.SetText(planetCombo + " COMBO!");
+			newValue = value * (1f + planetCombo * 0.2f);
 		}
+
+		score += newValue;
+		playerHUD.UpdateScoreText(score);
+		playerHUD.ShowFloatingText(newValue, position);	
+		planetDestroyedCount += 1;
+	}
+
+
+	public void CollectCoin(int value){
+		coinsCollected += value;
+		playerHUD.UpdateCoinText(coinsCollected);
+	}
+
+
+	public int GetTotalCoins(){
+		return PlayerPrefs.GetInt("TotalCoins");
+	}
+
+	public void SpendTotalCoins(int coinsSpent){
+		PlayerPrefs.SetInt("TotalCoins", PlayerPrefs.GetInt("TotalCoins") - coinsSpent);
+	}
+
+	public void ChangePlanetsOnScreenCount(int i){
+		planetsOnScreenCount += i;
+	}
+
+	private IEnumerator ShowDifficultyIncreaseText(){
+		difficultyIncreaseText.SetActive(true);
+		GetComponent<AudioSource>().PlayOneShot(difficultyIncreaseSound);
+		yield return new WaitForSeconds(1f);
+		difficultyIncreaseText.SetActive(false);
+	}
+
+
+	// handles handing when the pause button is clicked
+	public void OnPauseButtonClick(){
+		if (gamePaused){
+			// if game is already paused, unpause the game
+			pauseBoxObj.SetActive(false);
+			playerHUD.SetIsHUDActive(true);
+			Time.timeScale = 1f;
+			gamePaused = false;
+		}
+		else{
+			// if game is not paused, pause the game
+			pauseBoxObj.SetActive(true);
+			playerHUD.SetIsHUDActive(false);
+			Time.timeScale = 0f;
+			gamePaused = true;
+		}
+	}
+
+
+	public void ClearData(){
+		PlayerPrefs.SetFloat("HighScore", 0f);
+		PlayerPrefs.SetInt("TotalCoins", 0);
+		PlayerUpgrader.ClearUpgrades();
+	}
+
+	public static float GetAngleFromVector(Vector3 input){
+		float angle;
+		if (input.x == 0) {
+			if (input.y > 0)
+				angle = 90;
+			else{
+				angle = 270;
+			}
+		}
+		else{
+			angle =  Mathf.Atan2 (input.y, input.x) * Mathf.Rad2Deg;
+		}
+
+		return angle;
 	}
 }

@@ -12,12 +12,15 @@ Basic Gameplay
 - home planet in middle of screen, constantly rotating
 - hostile objects spawn in all corners of the screen and fly towards the middle, destroy them by blasting off
 	different sized planets, asteroids, medium planets, big planets. bigger ones need cracking. 
+	treasure planets: blowing up releases powerups and extra money
 	planets with rotating moons -> have to destroy moon first. if destroy planet first the moon will fly off 
 	space debris: can only be destroyed by hitting a weak point. otherwise bounces player away
 	spinng planets: has a ring, you must land on it right or you will get smacked away
-	blackholes? randomly spinning planets? flying ufo enemies? 
+	blackholes that sucks you in (magnetically not orbitally) and kills you if you hit the middle. 
+		push a planet into it to make it go away.
 	UFOs that charge forward a big chunk of space at a time. -> gets destroyed by pushing planets
-	ironclad planets that can only be destroyed via chainedExplosions
+	ironclad planets that can only be destroyed via planet pushing.
+	poison planets that will kill you if landed on. can only be destroyed via planet pushing
 - player actions
 	jump to blast off planets. 
 	special action: homing beacon: instantly stop all movement and fly slowly back to the home planet, until landing on it or another planet
@@ -39,12 +42,15 @@ Basic Gameplay
 	player
 		charge time
 		special skill cooldown
-		flying max speed
-		combo decay speed
-	planet
-		rotation speed
-		health
+		coin magnet radius
 		blast off speed
+		crack dmg
+		planet push power
+	planet
+		rotation speed -> increase rotation speed of all planets you land on
+	progression
+		fast forward through different chapter 
+		
 
 Random ideas
 - action button
@@ -78,8 +84,18 @@ Random ideas
 	
 
 TODO
-- better difficulty curve
-- simple game menu and upgrade menu
+- better difficulty curve -> planets come in faster at higher difficulties, more variety of planets
+	lvl 1: 10 planets, asteroids and red planets. 4 planets on screen max. spawn every 6 seconds.
+	lvl 2: 15 planets, asteroids, red planets, big planets. 5 planets on screen max, spawn every 5 seconds
+	lvl 3: 20 planets, asteroids, red planets, big planets, 6 planets on screen max, spawn every 4 seconds
+	lvl 4 and after: 20 planets. all 3 planets (mainly the latter 2). 6+ planets on screen max. spawn every 4.5 seconds. increase until 3. 
+	
+- finish the rest of the upgrades
+
+Completed this round
+- upgrade menu, player upgrader
+- pause menu. transtioning between scenes and saving values.
+-
 
 REFACTOR
 	code for switching planets when you just hit them vs code for landonplanet
@@ -88,7 +104,16 @@ REFACTOR
 	Detecting when a player has respawned vs. warped for the sake of resetting player state
 		use an event system to notify all objs that care about players to switch pointers
 		also create a more elegant way of retiring old players so they don't show up anymore
-	planets could be refactored with polymorphism 
+	planets could be refactored with polymorphism?
+	gameManager singleton vs static class
+	mapManager should start the game when its loaded or just contain info and let gameManager start the game when loaded?
+	GameManager's load scene methods are being called in wrapper functions across multiple classes. is there a way to consolidate this?
+		move the onclick methods set up of buttons to GameManager
+	Think of better way to pause the game (like with a gamePaused boolean) instead of just setting timescale to 0
+	Better way of setting the maxValue of an upgrade item. right now you have to do it in code AND in the scene. should just be 1 place.
+	Difficulty curve needs to be redone completely.
+	Homeplanet's rotation speed shouldn't be set by player as it is right now b/c of the upgrade system
+	
 - particle system
 	trails: https://www.youtube.com/watch?v=agr-QEsYwD0
 - upgrade to new unity?
@@ -113,6 +138,7 @@ BUGS
 - planets spawn too close to each other
 	solution 1: make a spwan checker to be spawned first. it's just a circle collider to check if the area is clear. if it is, spawn the next frame.
 				if it isn't pick a new spot to spawn. if this doesnt work 3 times in a row. wait X seconds.
+- trail renderer goes away after some orbit slings
 		
 ORBITS
 - goal: home planet should absolute attract within a certain zone, and 
@@ -120,14 +146,6 @@ ORBITS
 
 
 Development phases
-- phase 1: basic game for alpha testing -- by 11/13
-	orbits and jumps
-	correct planet spawning and destruction
-	difficulty progression
-	planet coupling and combos
-	coins and magnetic attraction
-	score calculation and game over screen
-
 - phase 2: polish the game
 	Special skills
 	music
@@ -145,5 +163,8 @@ Development phases
 		pick up
 	particle effects
 		
-		
+
+Alpha Feedback
+- do we even need a jump button? maybe you can just press anywhere on the screen. show "charging" with animation
+- 		
 		
