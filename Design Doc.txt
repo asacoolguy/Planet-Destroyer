@@ -84,18 +84,8 @@ Random ideas
 	
 
 TODO
-- better difficulty curve -> planets come in faster at higher difficulties, more variety of planets
-	lvl 1: 10 planets, asteroids and red planets. 4 planets on screen max. spawn every 6 seconds.
-	lvl 2: 15 planets, asteroids, red planets, big planets. 5 planets on screen max, spawn every 5 seconds
-	lvl 3: 20 planets, asteroids, red planets, big planets, 6 planets on screen max, spawn every 4 seconds
-	lvl 4 and after: 20 planets. all 3 planets (mainly the latter 2). 6+ planets on screen max. spawn every 4.5 seconds. increase until 3. 
-	
-- finish the rest of the upgrades
 
-Completed this round
-- upgrade menu, player upgrader
-- pause menu. transtioning between scenes and saving values.
--
+
 
 REFACTOR
 	code for switching planets when you just hit them vs code for landonplanet
@@ -139,6 +129,8 @@ BUGS
 	solution 1: make a spwan checker to be spawned first. it's just a circle collider to check if the area is clear. if it is, spawn the next frame.
 				if it isn't pick a new spot to spawn. if this doesnt work 3 times in a row. wait X seconds.
 - trail renderer goes away after some orbit slings
+- quitting using the pause menu during the game still makes the GameOver coroutine run
+- player not always landing on planet even when it obvious ht it. same with coin attraction
 		
 ORBITS
 - goal: home planet should absolute attract within a certain zone, and 
@@ -166,5 +158,5 @@ Development phases
 
 Alpha Feedback
 - do we even need a jump button? maybe you can just press anywhere on the screen. show "charging" with animation
-- 		
+- should launch speed be upgradable? maybe that should always be the same so the player get used to it. make other things upgradable. 
 		

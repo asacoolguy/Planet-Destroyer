@@ -184,16 +184,20 @@ public static class PlayerUpgrader{
 		}
 		switch(PlayerPrefs.GetInt("Magnet")){
 			default:
-				player.coinAttractionRadius = 6f;
+				player.coinAttractionRadius = 5f;
+				player.coinAttractionSpeed = 12f;
 				break;
 			case 0: 
-				player.coinAttractionRadius = 6f;
+				player.coinAttractionRadius = 5f;
+				player.coinAttractionSpeed = 12f;
 				break;
 			case 1:
-				player.coinAttractionRadius = 9f;
+				player.coinAttractionRadius = 8f;
+				player.coinAttractionSpeed = 16f;
 				break;
 			case 2:
-				player.coinAttractionRadius = 12f;
+				player.coinAttractionRadius = 11f;
+				player.coinAttractionSpeed = 20f;
 				break;
 		}
 		switch(PlayerPrefs.GetInt("Charge")){

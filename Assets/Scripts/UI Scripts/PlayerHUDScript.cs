@@ -22,10 +22,10 @@ public class PlayerHUDScript : MonoBehaviour {
 
 	void Awake () {
 		// sets up all the GUI elements
-		scoreText = transform.Find("Top Bar").Find("Score").GetComponent<Text>();
-		difficultyText = transform.Find("Top Bar").Find("Difficulty").GetComponent<Text>();
-		coinText = transform.Find("Top Bar").Find("Coin").GetComponent<Text>();
-		pauseButton = transform.Find("Top Bar").Find("Pause Button").GetComponent<Button>();
+		scoreText = transform.parent.Find("Top Bar").Find("Score").GetComponent<Text>();
+		difficultyText = transform.parent.Find("Top Bar").Find("Difficulty").GetComponent<Text>();
+		coinText = transform.parent.Find("Top Bar").Find("Coin").GetComponent<Text>();
+		pauseButton = transform.parent.Find("Top Bar").Find("Pause Button").GetComponent<Button>();
 		pauseButton.onClick.AddListener(() => GameManager.instance.OnPauseButtonClick());
 
 		slider = transform.Find("Power Slider").GetComponent<Slider>();
@@ -72,13 +72,13 @@ public class PlayerHUDScript : MonoBehaviour {
 		}
 
 
-		if (Input.GetKeyDown(KeyCode.Z)){
+		if (Input.GetKeyDown(KeyCode.X)){
 			StartJumpButtonPress();
 		}
-		if (Input.GetKeyUp(KeyCode.Z)){
+		if (Input.GetKeyUp(KeyCode.X)){
 			EndJumpButtonPress();
 		}
-		if (Input.GetKeyDown(KeyCode.X)){
+		if (Input.GetKeyDown(KeyCode.Z)){
 			OnActionButtonPress();
 		}
 

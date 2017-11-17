@@ -37,7 +37,7 @@ public class GameManager : MonoBehaviour {
 	}
 
 
-	private bool gameRunning;
+	private bool gameRunning, gameLooping;
 
 	void OnEnable(){
 		SceneManager.sceneLoaded += OnSceneFinishedLoading;
@@ -58,17 +58,20 @@ public class GameManager : MonoBehaviour {
 		}
 	}
 
-	void Start(){
-		
+	void Update(){
+
 	}
 
 
 	// main game loop that carries the game through its states
 	private IEnumerator GameLoop(){
-		// run the game 
-		yield return StartCoroutine(RunGame());
+		if (!gameLooping){
+			gameLooping = true;
+			// run the game 
+			yield return StartCoroutine(RunGame());
 
-		yield return StartCoroutine(GameOver());
+			yield return StartCoroutine(GameOver());
+		}
 	}
 
 
@@ -78,7 +81,7 @@ public class GameManager : MonoBehaviour {
 		playerHUD.UpdateDifficultyText(difficulty);
 		gameRunning = true;
 
-		while (gameRunning){
+		while (gameLooping && gameRunning){
 			// spawn planets based on difficulty
 			if (canSpawn){
 				int r = 0;
@@ -136,27 +139,32 @@ public class GameManager : MonoBehaviour {
 
 	// game over state. show game over screen and result screen
 	private IEnumerator GameOver(){
-		GetComponent<AudioSource>().PlayOneShot(gameOverSound);
-		Time.timeScale = 0;
-		notificationObj.SetActive(true);
+		if (gameLooping && !gameRunning){
+			GetComponent<AudioSource>().PlayOneShot(gameOverSound);
+			Time.timeScale = 0;
+			notificationObj.SetActive(true);
 
-		string scoreString = "Score: " + Mathf.RoundToInt(score);
-		if (score > PlayerPrefs.GetFloat("HighScore")){
-			scoreString = "<color=#" + ColorUtility.ToHtmlStringRGB(Color.red) + ">New High Score: " + Mathf.RoundToInt(score) + "</color>";
-			PlayerPrefs.SetFloat("HighScore", score);
+			string scoreString = "Score: " + Mathf.RoundToInt(score);
+			if (score > PlayerPrefs.GetFloat("HighScore")){
+				scoreString = "<color=#" + ColorUtility.ToHtmlStringRGB(Color.red) + ">New High Score: " + Mathf.RoundToInt(score) + "</color>";
+				PlayerPrefs.SetFloat("HighScore", score);
+			}
+
+			PlayerPrefs.SetInt("TotalCoins", coinsCollected + PlayerPrefs.GetInt("TotalCoins"));
+
+			notificationObj.transform.Find("Score Text").GetComponent<Text>().text = scoreString ;
+			notificationObj.transform.Find("Combo Text").GetComponent<Text>().text = "Max Combo: " + maxPlanetCombo;
+			notificationObj.transform.Find("Coin Text").GetComponent<Text>().text = "Coins Collected: " + coinsCollected;
+
+			playerHUD.SetIsHUDActive(false);
+
+
+			while (GetComponent<AudioSource>().isPlaying){
+				yield return null;
+			}
+
+			gameLooping = false;
 		}
-
-		PlayerPrefs.SetInt("TotalCoins", coinsCollected + PlayerPrefs.GetInt("TotalCoins"));
-
-		notificationObj.transform.Find("Score Text").GetComponent<Text>().text = scoreString ;
-		notificationObj.transform.Find("Combo Text").GetComponent<Text>().text = "Max Combo: " + maxPlanetCombo;
-		notificationObj.transform.Find("Coin Text").GetComponent<Text>().text = "Coins Collected: " + coinsCollected;
-
-		playerHUD.SetIsHUDActive(false);
-
-		gameRunning = false;
-
-		yield return null;	
 	}
 
 
@@ -170,14 +178,20 @@ public class GameManager : MonoBehaviour {
 
 
 	public void LoadGame(){
+		gameLooping = false;
+		gameRunning = false;
 		SceneManager.LoadScene("Planet Defense");
 	}
 
 	public void LoadMainMenu(){
+		gameLooping = false;
+		gameRunning = false;
 		SceneManager.LoadScene("Main Menu");
 	}
 
 	public void LoadUpgrade(){
+		gameLooping = false;
+		gameRunning = false;
 		SceneManager.LoadScene("Upgrade");
 	}
 
@@ -195,6 +209,7 @@ public class GameManager : MonoBehaviour {
 
 	public void InitialSetup(){
 		gameRunning = false;
+		gameLooping = false;
 		difficulty = 1;
 		score = 0f;
 		coinsCollected = 0;
@@ -229,7 +244,7 @@ public class GameManager : MonoBehaviour {
 
 
 	public void StartGameLoop(){
-		if (!gameRunning){
+		if (!gameLooping){
 			StartCoroutine(GameLoop());
 		}
 		else{
