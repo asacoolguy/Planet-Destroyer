@@ -17,7 +17,8 @@ public class PlanetScript : MonoBehaviour {
 
 	// planet pushing variables
 	private Vector2 pushForce;
-	public float planetPushDecayTime;
+	[SerializeField] float pushSpeed;
+	public float pushDecayTime;
 	private bool collidedAfterPush;
 	private GameObject lastInteractedObj; // used to make sure collision detection doesn't happen twice
 
@@ -176,18 +177,17 @@ public class PlanetScript : MonoBehaviour {
 
 
 	// pushes the planet in the given direction and speed 
-	public void PushPlanet(Vector2 direction, float speed){
-		StartCoroutine(PushPlanetHelper(direction, speed));
+	public void PushPlanet(Vector2 direction, float pushPower){
+		StartCoroutine(PushPlanetHelper(direction, pushPower));
 	}
 
-	private IEnumerator PushPlanetHelper(Vector2 direction, float speed){
-		float counter = 0;
-		float t = 0;
+	private IEnumerator PushPlanetHelper(Vector2 direction, float pushPower){
+		float counter = 0f;
 		collidedAfterPush = false;
-		while(!isDestroyed && !collidedAfterPush && counter <= planetPushDecayTime){
-			pushForce = direction * Mathf.SmoothStep(speed, 0, t) / weight;
+		while(!isDestroyed && !collidedAfterPush && counter <= pushDecayTime){
+			float speedRatio = Mathf.Pow(1f - (counter / pushDecayTime), 2f);
+			pushForce = direction * (pushSpeed * pushPower) * speedRatio;
 			counter += Time.deltaTime;
-			t = counter/planetPushDecayTime;
 			yield return null;
 		}
 		pushForce = Vector2.zero;

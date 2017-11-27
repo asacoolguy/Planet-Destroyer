@@ -46,29 +46,30 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\Character Scripts\CaptainSpaceScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\OrbAttractionScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\PlayerAudioScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\PlayerScript.cs" />
      <Compile Include="Assets\Scripts\Character Scripts\PowerupEffectScript.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\CameraShakeScript.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\GameManager.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\MapManager.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\MusicManager.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\OldGameManager.cs" />
-     <Compile Include="Assets\Scripts\General Utility Scripts\PlayerUpgrader.cs" />
      <Compile Include="Assets\Scripts\Pick-up Scripts\OrbScript.cs" />
      <Compile Include="Assets\Scripts\Pick-up Scripts\PowerupScript.cs" />
      <Compile Include="Assets\Scripts\Planet scripts\OrbitScript.cs" />
      <Compile Include="Assets\Scripts\Planet scripts\PlanetGravityScript.cs" />
      <Compile Include="Assets\Scripts\Planet scripts\PlanetScript.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\ComboTextScript.cs" />
+     <Compile Include="Assets\Scripts\UI Scripts\JetpackBar.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\MainMenuScript.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\PlayerHUDScript.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\PostGameNotifier.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\PreGameNotifier.cs" />
      <Compile Include="Assets\Scripts\UI Scripts\TournamentProgress.cs" />
      <Compile Include="Assets\Scripts\Upgrade Screen Scripts\UpgradePanel.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\BackgroundScroller.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\CameraShakeScript.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\GameManager.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\MapManager.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\MusicManager.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\OldGameManager.cs" />
+     <Compile Include="Assets\Scripts\Utility Scripts\PlayerUpgrader.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>D:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>

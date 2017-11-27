@@ -6,11 +6,11 @@ using UnityEngine;
 /// Dedicated to playing various sound effects for the player object
 /// </summary>
 public class PlayerAudioScript : MonoBehaviour {
-	public AudioClip landingSound, leavingSound, deathSound, dashSound, chargedSound, 
+	public AudioClip landingSound, leavingSound, deathSound, jetpackSound, chargedSound, 
 		respawnSound, orbSound, chargingSound, maxedChargingSound, collisionSound, tractorBeamSound;
 	private AudioSource audioSource, orbAudioSource, loopAudioSource;
 
-	private bool playingChargeSound, playingTractorBeamSound;
+	private bool playingChargeSound, playingTractorBeamSound, playingJetpackSound;
 
 	// Use this for initialization
 	void Awake () {
@@ -20,13 +20,14 @@ public class PlayerAudioScript : MonoBehaviour {
 		loopAudioSource.loop = true;
 		playingChargeSound = false;
 		playingTractorBeamSound = false;
+		playingJetpackSound = false;
 	}
 
 	void Update(){
-		if ((playingChargeSound || playingTractorBeamSound) && loopAudioSource.isPlaying == false){
+		if ((playingChargeSound || playingTractorBeamSound || playingJetpackSound) && loopAudioSource.isPlaying == false){
 			loopAudioSource.Play();
 		}
-		else if(!playingChargeSound && !playingTractorBeamSound){
+		else if(!playingChargeSound && !playingTractorBeamSound && !playingJetpackSound){
 			loopAudioSource.Stop();
 		}
 	}
@@ -51,16 +52,13 @@ public class PlayerAudioScript : MonoBehaviour {
 		audioSource.PlayOneShot(respawnSound);
 	}
 
-	public void PlayDashSound(){
-		audioSource.PlayOneShot(dashSound);
-	}
-
 	public void PlayChargedSound(){
 		audioSource.PlayOneShot(chargedSound);
 	}
 
 	public void PlayChargingSound(){
 		StopTractorBeamSound();
+		loopAudioSource.pitch = 1f;
 		loopAudioSource.clip = chargingSound;
 		playingChargeSound = true;
 	}
@@ -85,6 +83,18 @@ public class PlayerAudioScript : MonoBehaviour {
 	public void StopTractorBeamSound(){
 		loopAudioSource.pitch = 1f;
 		playingTractorBeamSound = false;
+	}
+
+	public void PlayJetpackSound(){
+		StopChargingSound();
+		loopAudioSource.pitch = 1.6f;
+		loopAudioSource.clip = jetpackSound;
+		playingJetpackSound = true;
+	}
+
+	public void StopJetpackSound(){
+		loopAudioSource.pitch = 1f;
+		playingJetpackSound = false;
 	}
 
 	public void PlayOrbSound(int combo){

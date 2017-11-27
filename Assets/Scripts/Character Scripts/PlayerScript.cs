@@ -2,40 +2,37 @@
 using System.Collections;
 using System.Collections.Generic;
 
-/// <summary>
-/// PlayerScript is the base class for players. It defines basic properties of players such as jumping and landing.
-/// different charaters should extend this class to implement their unique abilities and properties. 
-/// </summary>
 
-public abstract class PlayerScript : MonoBehaviour {
+public class PlayerScript : MonoBehaviour {
 	// basic info and states
 	protected bool isLanded;
 	protected bool canJump;
+	protected bool canControl;
 	private Vector3 initialPosition;
 	private Vector3 initialRotation;
 	private PlanetScript currentPlanet, lastPlanet;
+	private Vector2 cumulatedGravityPullForce;
 	private float lastPlanetTransferTime = 0f;
-	private ArrayList nearbyPlanets = new ArrayList();
+	private List<GameObject> nearbyPlanets;
+
 	// respawn variables
 	private bool isDead;
 	public float respawnTime;
 	private float respawnTimeCount = 0;
-	// scores and bars
-	public float powerLevelInitial;
-	private float powerLevel;
-	public float powerLevelDecayPerSecond;
-	public float powerLevelUsedOnJump;
-	// new powerlevel stuff
+
+	// charged jump stuff
 	public float maxChargeTime;
 	public float maxChargeSpeed;
 	public float maxSpeed;
+	protected float currentChargeTime;
+	private GameObject chargeBar;
 
 	// power up variables
 	private float powerupCountdown;
-	public PowerupScript.PowerupType activatedPowerup; // TODO:make this private later
-	public int powerupChargeRate = 75; //TODO: make this private later
-	public float powerupMass = 5; //TODO: make this private later
-	public float powerupSpeed = 3; //TODO: make this private later
+	private PowerupScript.PowerupType activatedPowerup; // TODO:make this private later
+	private int powerupChargeRate = 75; //TODO: make this private later
+	private float powerupMass = 5; //TODO: make this private later
+	private float powerupSpeed = 3; //TODO: make this private later
 	private PowerupEffectScript powerupEffect;
 
 	// for adding juice to the game
@@ -44,29 +41,40 @@ public abstract class PlayerScript : MonoBehaviour {
 	public float slowMotionKillDuration = 0.01f;
 
 	// tracking components
-	private Rigidbody2D myRigidBody;
+	protected Rigidbody2D myRigidBody;
 	protected PlayerAudioScript playerAudio;
 	protected GameManager gameManager;
 	protected TrailRenderer tail;
 
-	// score tracking variables
-	public bool canGetPoints;
-
-	// specialAction timers
+	// specialAction variables
 	protected bool canAction;
-	protected bool actionTaken;
-	public float actionTimeLimit;
-	private float currentActionTime;
+	protected bool takingAction;
+	public float actionChargeTime;
+	protected float currentActionChargeTime;
+	public int actionChargesMax;
+	protected int actionChargesUsable;
+	protected JetpackBar jetpackBar;
+	[SerializeField]private float tractorBeamSpeed;
+	[SerializeField]private float jetpackSpeed = 10f, jetpackDuration = 0.3f;
+	protected float currentJetpackDuration = 0f;
+	protected float leavingSpeed = 0f;
+
+	private GameObject jetpackFlame;
+	private LineRenderer tractorBeam;
 
 	// planet pushing
-	public float planetPushSpeed;
+	public float planetPushPower;
 
+	// changing planet speed
 	public float homePlanetRotationSpeed;
 
 	// coin attraction 
 	public float coinAttractionRadius;
 	public float coinAttractionSpeed;
 
+	// homePlanet attract force to prevent being stuck in orbit
+	private float antiStuckForceTimer = 6f;
+	private float currentAntiStuckForceTime;
 
 	protected void Awake(){
 		playerAudio = GetComponent<PlayerAudioScript>();
@@ -76,6 +84,11 @@ public abstract class PlayerScript : MonoBehaviour {
 		powerupEffect = transform.GetChild(0).GetComponent<PowerupEffectScript>();
 		tail = GetComponent<TrailRenderer>();
 		transform.Find("Orb Attractor").GetComponent<CircleCollider2D>().radius = coinAttractionRadius / transform.lossyScale.x;
+		nearbyPlanets = new List<GameObject>();
+		chargeBar = transform.Find("Charge Bar").gameObject;
+		jetpackBar = GameObject.FindGameObjectWithTag("PlayerHUD").GetComponent<JetpackBar>();
+		tractorBeam = GetComponent<LineRenderer>();
+		jetpackFlame = transform.Find("Jetpack Flame").gameObject;
 	}
 
 
@@ -95,26 +108,55 @@ public abstract class PlayerScript : MonoBehaviour {
 			if (tag == "Player"){
 				if (!isLanded){ 
 					// if player is drifting, it should move based on gravity from nearby planets and rotate to face forwards
-					myRigidBody.velocity += CalculateGravityPull();
+					Vector2 gravityPullForce = CalculateGravityPull();
+					if (gravityPullForce.magnitude > 0){
+						cumulatedGravityPullForce += gravityPullForce;
+					}
+					else{
+						cumulatedGravityPullForce = Vector2.zero;
+					}
+					myRigidBody.velocity += gravityPullForce;
+
 					// limit player speed
 					if (myRigidBody.velocity.magnitude > maxSpeed){
 						myRigidBody.velocity = myRigidBody.velocity.normalized * maxSpeed;
+						//Debug.Log("Playerspeed limited");
 					}
 
-					// increment actionTimer and make it available if we pass the limit
-					if (!canAction && !actionTaken){
-						currentActionTime += Time.deltaTime;
-						if (currentActionTime > actionTimeLimit){
-							canAction = true;
-							playerAudio.PlayChargedSound();
-						}
+
+					// increment antiStuckForce timer while drifting. if timer exceeds certain amount, apply force towards home
+					currentAntiStuckForceTime += Time.deltaTime;
+					if (currentAntiStuckForceTime > antiStuckForceTimer){
+						myRigidBody.velocity += (Vector2)transform.position.normalized * -3f * Time.deltaTime;
+						//Debug.Log("applying anti stuck force");
 					}
+
+					// check if player can do its special action
+					if (!takingAction && actionChargesUsable > 0){
+						canAction = true;
+					}
+
+					DetectActionButtonPress();
 				}
 				else{ 
 					// if player has landed, then it has no velocity and it should rotate to stand on the planet
 					myRigidBody.velocity = Vector2.zero;
 					StandOnCurrentPlanet();
 					RotateToCurrentPlanet();
+
+					DetectJumpButtonPress();
+				}
+
+				// if we're not at max charge for actions, charge the action bar
+				if (actionChargesUsable < actionChargesMax){
+					currentActionChargeTime += Time.deltaTime;
+					jetpackBar.UpdateChargeBar(currentActionChargeTime);
+					if (currentActionChargeTime > actionChargeTime){
+						//jetpackBar.PlayChargedAnimation(actionChargesUsable);
+						playerAudio.PlayChargedSound();
+						actionChargesUsable += 1;
+						currentActionChargeTime = 0f;
+					}
 				}
 			}
 		}
@@ -163,6 +205,7 @@ public abstract class PlayerScript : MonoBehaviour {
 	}
 
 
+	// when colliding with a coin, collect it and destroy it
 	void OnTriggerEnter2D(Collider2D other){
 		if(other.gameObject.tag == "CoinOrb" && other.gameObject.GetComponent<OrbScript>().GetIsCollectable()){
 			gameManager.CollectCoin(other.gameObject.GetComponent<OrbScript>().pointValue);
@@ -177,20 +220,59 @@ public abstract class PlayerScript : MonoBehaviour {
 		isDead = false;
 		isLanded = false;
 		canJump = false;
+		currentChargeTime = 0f;	
 		canAction = false;
-		actionTaken = false;
-		currentActionTime = 0f;
+		takingAction = false;
+		currentActionChargeTime = 0f;
+		actionChargesUsable = 0;
 		transform.parent = null;
 		currentPlanet = null;
 		lastPlanet = null;
+		currentAntiStuckForceTime = 0f;
+		leavingSpeed = 0f;
+
+		chargeBar.SetActive(false);
+		jetpackFlame.SetActive(false);
 		activatedPowerup = PowerupScript.PowerupType.none;
 		powerupCountdown = 0;
 		powerupEffect.DeactivateAllEffects();
 		transform.position = initialPosition; // TODO: need better method for respawn
 		transform.eulerAngles = initialRotation;
-		//powerLevel = powerLevelInitial;
 		nearbyPlanets.Clear();
 	}
+
+
+	// disable the player's components and starts the respawn timer
+	public void Suicide(){
+		isDead = true;
+		respawnTimeCount = respawnTime;
+		GetComponent<SpriteRenderer>().enabled = false;
+		GetComponent<BoxCollider2D>().enabled = false;
+
+		StartCoroutine(ShowDeathEffect());
+	}
+
+
+	// Coroutine that does the effects for when a player dies
+	IEnumerator ShowDeathEffect(){
+		Time.timeScale = slowMotionKillSpeed;
+		cameraShaker.ShakeCamera(2f, 0.5f);
+		Handheld.Vibrate();
+		yield return new WaitForSeconds(slowMotionKillDuration);
+		Time.timeScale = 1f;
+		playerAudio.PlayDeathSound();
+	}
+
+
+	// respawn the player by reactivating its components
+	public void Respawn(){
+		ResetPlayerStates();
+		GetComponent<SpriteRenderer>().enabled = true;
+		GetComponent<BoxCollider2D>().enabled = true;
+
+		playerAudio.PlayRespawnSound();
+	}
+
 
 	// helper function that lands the player onto a given planet
 	public void LandOnPlanet(GameObject planet){
@@ -198,9 +280,10 @@ public abstract class PlayerScript : MonoBehaviour {
 		if (isLanded == false && currentPlanet == null){
 			isLanded = true;
 			canJump = true; // TODO: implement a brief delay when you land where you can't jump
-			currentActionTime = 0f;
 			canAction = false;
-			actionTaken = false;
+			takingAction = false;
+			currentAntiStuckForceTime = 0f;
+			cumulatedGravityPullForce = Vector2.zero;
 			StartCoroutine(EnableTail(false, 1f));
 
 			// clear coin combo
@@ -214,14 +297,13 @@ public abstract class PlayerScript : MonoBehaviour {
 			myRigidBody.freezeRotation = true;
 			transform.parent = planet.transform;
 			nearbyPlanets.Remove (currentPlanet.gameObject);
-
 			// TODO: clean this up
 			if (currentPlanet.gameObject.tag == "HomePlanet" && currentPlanet.rotationSpeed != homePlanetRotationSpeed){
 				currentPlanet.rotationSpeed = homePlanetRotationSpeed;
 			}
 		}
 		else{
-			print("Error: cannot land on " + planet.name);
+			Debug.Log("Error: cannot land on " + planet.name);
 		}
 	}
 
@@ -235,15 +317,13 @@ public abstract class PlayerScript : MonoBehaviour {
 			StartCoroutine(EnableTail(true, 0f));
 			playerAudio.PlayLeavingSound();
 
+			float chargePercentage = Mathf.Clamp(chargeTime / maxChargeTime, 0f, 1f);
+			leavingSpeed = maxChargeSpeed * (2f + chargePercentage) / 3f;
 			Vector2 leavingDirection = (Vector2)(transform.position - currentPlanet.transform.position).normalized;
-            // TODO: check if applyForce is better
-            float leavingSpeed = maxChargeSpeed * 2f / 3f;
-            if (chargeTime >= maxChargeTime){
-            	leavingSpeed = maxChargeSpeed;
-            }
-            if (activatedPowerup == PowerupScript.PowerupType.lighting){
-            	leavingSpeed *= powerupSpeed;
-            }
+
+            //if (activatedPowerup == PowerupScript.PowerupType.lighting){
+            //	leavingSpeed *= powerupSpeed;
+            //}
 			myRigidBody.velocity = leavingDirection * leavingSpeed;
 			myRigidBody.freezeRotation = false;
 
@@ -253,11 +333,8 @@ public abstract class PlayerScript : MonoBehaviour {
 			if (currentPlanet.tag != "HomePlanet"){
 				// if the planet will not explode, push it 
 				if (!currentPlanet.WillExplodeNext()){
-					float pushSpeed = planetPushSpeed;
-					if (chargeTime >= maxChargeTime){
-						pushSpeed = planetPushSpeed * 3;
-					}
-					currentPlanet.PushPlanet(-leavingDirection, pushSpeed);
+					float pushPower = planetPushPower * (1f + chargePercentage * 1f);
+					currentPlanet.PushPlanet(-leavingDirection, pushPower);
 				}
 				currentPlanet.TakeDamage(leavingDirection, true);
 			}
@@ -283,41 +360,6 @@ public abstract class PlayerScript : MonoBehaviour {
 	}
 
 
-	// disable the player's components and starts the respawn timer
-	public void Suicide(){
-		isDead = true;
-		powerLevel = 0f;
-		respawnTimeCount = respawnTime;
-		GetComponent<SpriteRenderer>().enabled = false;
-		GetComponent<BoxCollider2D>().enabled = false;
-
-		StartCoroutine(ShowDeathEffect());
-	}
-
-	// Coroutine that does the effects for when a player dies
-	IEnumerator ShowDeathEffect(){
-		Time.timeScale = slowMotionKillSpeed;
-		cameraShaker.ShakeCamera(2f, 0.5f);
-		Handheld.Vibrate();
-		yield return new WaitForSeconds(slowMotionKillDuration);
-		Time.timeScale = 1f;
-		playerAudio.PlayDeathSound();
-	}
-
-	// called by other players instead of suicide when this player 
-	public void BarrierPop(Vector2 velocity){
-
-	}
-
-	// respawn the player by reactivating its components
-	public void Respawn(){
-		ResetPlayerStates();
-		GetComponent<SpriteRenderer>().enabled = true;
-		GetComponent<BoxCollider2D>().enabled = true;
-
-		playerAudio.PlayRespawnSound();
-	}
-
 	private Vector2 CalculateGravityPull(){
 		Vector2 final = Vector2.zero;
 		float G = 6.67300f * 1f;  // should be 10 to the -11th power, but we're keeping planet mass low to compensate
@@ -325,9 +367,9 @@ public abstract class PlayerScript : MonoBehaviour {
 		if (activatedPowerup == PowerupScript.PowerupType.lighting){
 			m = powerupMass;
 		}
-		foreach(GameObject p in nearbyPlanets) {
-			if (p != null && (lastPlanet == null || p != lastPlanet.gameObject)){
-				PlanetScript planet = p.GetComponent<PlanetScript>();
+		foreach(GameObject planetObj in nearbyPlanets) {
+			if (planetObj != null && (lastPlanet == null || planetObj != lastPlanet.gameObject)){
+				PlanetScript planet = planetObj.GetComponent<PlanetScript>();
 				if (planet && planet.GetIsDestroyed() == false){
 					Vector2 r = new Vector2(planet.transform.position.x - transform.position.x,
 											planet.transform.position.y - transform.position.y);
@@ -361,6 +403,78 @@ public abstract class PlayerScript : MonoBehaviour {
 	}
 
 
+	private void DetectJumpButtonPress(){
+		// detect jump button press for spaceKey
+		if (canControl && canJump){
+			if (Input.GetKeyDown(KeyCode.Space) ||
+				(Input.GetKey(KeyCode.Space) && currentChargeTime > 0f)){
+				currentChargeTime += Time.deltaTime;
+				if (currentChargeTime > 0.15f && currentChargeTime < maxChargeTime){
+					playerAudio.PlayChargingSound();
+					chargeBar.SetActive(true);
+					chargeBar.transform.localScale = new Vector3(chargeBar.transform.localScale.x, 
+															Mathf.Lerp(3f, 15f, currentChargeTime/maxChargeTime),
+															chargeBar.transform.lossyScale.x);
+				}
+				else if(currentChargeTime >= maxChargeTime){
+					playerAudio.PlayMaxedChargingSound();
+				}
+			}
+			else if (Input.GetKeyUp(KeyCode.Space) && currentChargeTime > 0f){
+				LeavePlanet(currentChargeTime);
+				currentChargeTime = 0;
+				chargeBar.SetActive(false);
+				playerAudio.StopChargingSound();
+			}
+		}
+
+		// detect jumpButton press with touch
+		if (canControl && canJump && Input.touchCount > 0 && 
+			GameManager.instance.IsTouchPositionValid(Input.touches[0].position))
+		{
+			Touch touch = Input.touches[0];
+
+			if (touch.phase == TouchPhase.Began || 
+				(touch.phase == TouchPhase.Stationary && currentChargeTime > 0f) ||
+				(touch.phase == TouchPhase.Moved && currentChargeTime > 0f)){
+				currentChargeTime += Time.deltaTime;
+				if (currentChargeTime > 0.15f && currentChargeTime < maxChargeTime){
+					playerAudio.PlayChargingSound();
+					chargeBar.SetActive(true);
+					chargeBar.transform.localScale = new Vector3(chargeBar.transform.localScale.x, 
+															Mathf.Lerp(3f, 15f, currentChargeTime/maxChargeTime),
+															chargeBar.transform.lossyScale.x);
+				}
+				else if(currentChargeTime >= maxChargeTime){
+					playerAudio.PlayMaxedChargingSound();
+				}
+			}
+			else if(Input.touches[0].phase == TouchPhase.Ended && currentChargeTime > 0f){
+				LeavePlanet(currentChargeTime);
+				currentChargeTime = 0;
+				chargeBar.SetActive(false);
+				playerAudio.StopChargingSound();
+			}
+		}
+	}
+
+
+	private void DetectActionButtonPress(){
+		// detect action button press for spaceKey
+		if (canControl && canAction && Input.GetKeyDown(KeyCode.Space)){
+			StartCoroutine(ActivateJetpack());
+		}
+
+		// detect actionbutton press for touch
+		if (canControl && canAction && Input.touchCount > 0 && 
+			GameManager.instance.IsTouchPositionValid(Input.touches[0].position) &&
+			Input.touches[0].phase == TouchPhase.Began)
+		{
+			StartCoroutine(ActivateJetpack());
+		}
+	}
+
+
 	// function that the powerup object calls when it's been picked up by the player
 	// TODO: how to get enum from another file?
 	// TODO: investigate pssing anonymous functions
@@ -384,9 +498,110 @@ public abstract class PlayerScript : MonoBehaviour {
 		}
 	}
 
-	// does the player's action. to be implement by each different player class
-	public abstract void ActivatePlayerAction();
 
+	// allows player to fly back to home planet at a set speed until it lands a planet
+	// TODO: what to do with this?
+	private IEnumerator ActivateTractorBeam(){
+		tractorBeam.enabled = true;
+		StartCoroutine(EnableTail(false, 1f));
+
+		Vector2 newVelocity = transform.position.normalized * tractorBeamSpeed * -1;
+		playerAudio.PlayTractorBeamSound();
+
+		while(!isLanded){
+			myRigidBody.velocity = newVelocity;
+			tractorBeam.SetPosition(1, transform.position);
+			canJump = false;
+			yield return null;
+
+		}
+		tractorBeam.enabled = false;
+		playerAudio.StopTractorBeamSound();
+	}
+
+
+	// gives player a boost of speed in its current facing direction for a given duration without the effects of gravity
+	private IEnumerator ActivateJetpack(){
+		if (!isLanded && canAction && !takingAction){
+			actionChargesUsable -= 1;
+			jetpackBar.DepleteCurrentChargeBar();
+			canAction = false;
+			takingAction = true;
+
+			// calculate the direction that the player is facing and the speed in that direction in the current velocity
+			Vector2 facingDirection = GameManager.GetVectorFromAngle(transform.eulerAngles.z);
+			float facingDirectionSpeed = GameManager.GetVectorMagnitudeFromAnotherVector(myRigidBody.velocity, facingDirection);
+
+			float newSpeed = jetpackSpeed;
+			// if facing direction speed is larger than or equal to launch speed, then we're just boosting for speed.
+			// apply boost based on launch speed
+			if (facingDirectionSpeed >= leavingSpeed){
+				newSpeed = leavingSpeed + jetpackSpeed * 2f / 3f;
+				print("---boosting on top of launch speed.");
+			}
+			// if facing direction speed is larger than 0 but under the leaving speed, then we're being pulled somewhere but not too much yet.
+			// boost based on current speed
+			else if(facingDirectionSpeed > 0f && facingDirectionSpeed < leavingSpeed){
+				newSpeed = Mathf.Max(facingDirectionSpeed + jetpackSpeed * 2f / 3f, jetpackSpeed);
+				print("---boosting on top of current speed");
+			}
+			else{
+				print("---boosting on jetpack speed");
+			}
+			print("facing direction speed is " + facingDirectionSpeed + ", leaving speed is " + leavingSpeed + ", final speed is " + newSpeed);
+
+			currentJetpackDuration = 0f;
+			jetpackFlame.SetActive(true);
+			playerAudio.PlayJetpackSound();
+
+			// tiny delay before speedboost
+			float t = 0f;
+			while(t < 0.05f){
+				t += Time.deltaTime;
+				myRigidBody.velocity = Vector2.zero;
+				yield return null;
+			}
+
+			cameraShaker.ShakeCamera(2f, 0.15f);
+			while(currentJetpackDuration < jetpackDuration && !isLanded){
+				myRigidBody.velocity = facingDirection * newSpeed;
+				currentJetpackDuration += Time.deltaTime;
+				//float speedRatio = Mathf.Pow(currentJetpackDuration / jetpackDuration, 3f);
+
+				yield return null;
+			}
+
+			playerAudio.StopJetpackSound();
+			jetpackFlame.SetActive(false);
+			takingAction = false;
+			currentJetpackDuration = 0f;
+			leavingSpeed = newSpeed;
+		}
+	}
+
+
+	// if the player warped during a jetpack session, resume its visual effects but not its effects on velocity
+	// the sound isn't duplicated though because we're assuming the old player will finish playing it
+	private IEnumerator ResumeJetpack(){
+		// calculate jetpack direction based on where player is facing
+		//float angle = transform.eulerAngles.z - 90f;
+		//Vector2 direction = new Vector2(-Mathf.Cos(angle * Mathf.Deg2Rad), -Mathf.Sin(angle * Mathf.Deg2Rad)).normalized;
+
+		Vector2 currentJetpackSpeed = myRigidBody.velocity;
+		jetpackFlame.SetActive(true);
+
+		while(currentJetpackDuration < jetpackDuration && !isLanded){
+			// calculate and apply speed based on time
+			myRigidBody.velocity = currentJetpackSpeed;
+			currentJetpackDuration += Time.deltaTime;
+			yield return null;
+		}
+
+		jetpackFlame.SetActive(false);
+		takingAction = false;
+		currentJetpackDuration = 0f;
+		leavingSpeed = currentJetpackSpeed.magnitude;
+	}
 
 	// all the getters and setters
 	public bool GetIsLanded(){
@@ -405,16 +620,12 @@ public abstract class PlayerScript : MonoBehaviour {
 		return canAction;
 	}
 
-	public bool GetActionTaken(){
-		return actionTaken;
+	public bool GetTakingAction(){
+		return takingAction;
 	}
 
-	public float GetCurrentActionTime(){
-		return currentActionTime;
-	}
-
-	public float GetPowerLevel(){
-		return powerLevel;
+	public float GetcurrentActionChargeTime(){
+		return currentActionChargeTime;
 	}
 
 	public GameObject GetLastPlanet(){
@@ -426,25 +637,16 @@ public abstract class PlayerScript : MonoBehaviour {
 		}
 	}
 
-	public Vector3 GetInitialPosition(){
-		return initialPosition;
-	}
-
-	public Vector3 GetInitialRotation(){
-		return initialRotation;
-	}
-
-	public void SetCanGetPoints(bool b){
-		this.canGetPoints = b;
-	}
-
 	public PlayerAudioScript GetPlayerAudio(){
 		return playerAudio;
 	}
 
 	public void AddNearByPlanet(GameObject planet){
-		if (lastPlanet == null || planet != lastPlanet.gameObject){
+		if ((lastPlanet == null || planet != lastPlanet.gameObject) &&
+			(currentPlanet == null || planet != currentPlanet.gameObject)){
 			nearbyPlanets.Add(planet);
+			// reset antistuck force timer
+			currentAntiStuckForceTime = 0f;
 		}
 	}
 
@@ -452,6 +654,7 @@ public abstract class PlayerScript : MonoBehaviour {
 		nearbyPlanets.Remove(planet);
 	}
 
+	// returns true if the planet object can be added to the nearbyPlanet list
 	public bool HasNearByPlanet(GameObject planet){
 		return nearbyPlanets.Contains(planet);
 	}
@@ -462,24 +665,26 @@ public abstract class PlayerScript : MonoBehaviour {
 
 
 	public void GetDataFromOldPlayer(PlayerScript oldPlayer){
-		isLanded = oldPlayer.GetIsLanded();
-		canJump = oldPlayer.GetCanJump();
-		canAction = oldPlayer.GetCanAction();
-		actionTaken = oldPlayer.GetActionTaken();
-		currentActionTime = oldPlayer.GetCurrentActionTime();
-
+		isLanded = oldPlayer.isLanded;
+		canJump = oldPlayer.canJump;
+		canControl = oldPlayer.canControl;
+		canAction = oldPlayer.canAction;
+		currentActionChargeTime = oldPlayer.currentActionChargeTime;
+		actionChargesUsable = oldPlayer.actionChargesUsable;
 		myRigidBody.velocity = oldPlayer.GetComponent<Rigidbody2D>().velocity;
-		// powerup stuff
-		/*
-		activatedPowerup = PowerupScript.PowerupType.none;
-		powerupCountdown = 0;
-		powerupEffect.DeactivateAllEffects();
-		coinCombo = 0;
-		transform.position = initialPosition;
-		transform.eulerAngles = initialRotation;
-		//powerLevel = powerLevelInitial;
-		nearbyPlanets.Clear();
-		*/
+
+		// if the old player was using the jetpack when it warped, the new player should continue warping
+		takingAction = oldPlayer.takingAction;
+		currentJetpackDuration = oldPlayer.currentJetpackDuration;
+		leavingSpeed = oldPlayer.leavingSpeed;
+		if (takingAction && currentJetpackDuration > 0f){
+			StartCoroutine(ResumeJetpack());
+		}
+	}
+
+
+	public void SetCanControl(bool b){
+		canControl = b;
 	}
 
 }

@@ -1,6 +1,5 @@
 Planet Destroyers
 
-
 - 2D mobile "infinite runner" arcade game
 - Planet Defense game with coin collection, power ups, characters and upgrades
 - Uniqueness points
@@ -21,6 +20,7 @@ Basic Gameplay
 	UFOs that charge forward a big chunk of space at a time. -> gets destroyed by pushing planets
 	ironclad planets that can only be destroyed via planet pushing.
 	poison planets that will kill you if landed on. can only be destroyed via planet pushing
+	bomb planets will blow up after landing on it for X seconds. super easy to push though. can be used to blow up a bunch of other planets
 - player actions
 	jump to blast off planets. 
 	special action: homing beacon: instantly stop all movement and fly slowly back to the home planet, until landing on it or another planet
@@ -31,13 +31,6 @@ Basic Gameplay
 		extra speed, more mass (faster attraction), double coins, etc
 - Orbital slings
 	aim slightly off a big planet to use the planet's gravity to change your flight course
-- character classes/special powerups
-	default skill is the homing beacon
-	use powerups to get new skills 
-		dash forward
-		hookshot
-		enlarge
-		teleport
 - upgrades
 	player
 		charge time
@@ -52,15 +45,14 @@ Basic Gameplay
 		fast forward through different chapter 
 		
 
-Random ideas
-- action button
-	has charges that you can replenish by blowing up planets
+Cool ideas to implement 
 - combos
 	- blow up planets in a set amount of time to rack up combos for extra points
 	- blowing up a planet by pushing it into another planet gives extra points
 	- landing on earth clears the combo
 - better warping -> like in towerfall
 	dumplicate planets when they warp
+	player obj should be duplicated too with the correct jetpack effects
 - adaptive soundtrack
 	more planets on screen = more instruments on the sound track
 - progression
@@ -68,6 +60,8 @@ Random ideas
 	planet travels to new galaxy and every current planet gets a reskin
 	OR planet travels to new galaxy and 1 new element is introduced
 	figure out when this ends
+- Oxygen/gravity field 
+- dotted line to show travel trajectory
 - dynamic dificulty
 	make game harder/easier based on how player is doing/how many enemies on screen
 	check this out: https://en.wikipedia.org/wiki/Markov_chain
@@ -76,16 +70,26 @@ Random ideas
 	set amount of worlds you go through. and there is an ending. but you can play the game skillfully and use that to get more points. 
 - should the upgrade system be like downwell too? after beating each stage you choose to buy an upgrade	
 	or like burrito bull? you finish each stage, use the money to buy things and then try again?
-- coins
-	should they be more like downwell's coins: small, light/bouncy, interacts with physics
 - glow: https://www.assetstore.unity3d.com/en/#!/content/28044
 - outline: http://nielson.io/2016/04/2d-sprite-outlines-in-unity/ 
 	
 	
 
 TODO
+- pixel assets for astronaut, home planet and 3 planets
+- progression bar and speeding up planets as you go
+
+- change the planet rotation upgrade to affect all planets
+- update the upgrade menu
+- put some pixel stuff in just for looks
+- remove bottom bar and reset planet center, redesign the entire HUD
 
 
+COMPLETED
+- apply tiny force towards middle when drifting for too long
+- moved jump functionality from button to tap anywhere
+- captainSpace code is gone
+- jetpacks with a charge system
 
 REFACTOR
 	code for switching planets when you just hit them vs code for landonplanet
@@ -95,6 +99,7 @@ REFACTOR
 		use an event system to notify all objs that care about players to switch pointers
 		also create a more elegant way of retiring old players so they don't show up anymore
 	planets could be refactored with polymorphism?
+	instead of using the playerTag to identify which player is the active one, what if we just switch on/off the script
 	gameManager singleton vs static class
 	mapManager should start the game when its loaded or just contain info and let gameManager start the game when loaded?
 	GameManager's load scene methods are being called in wrapper functions across multiple classes. is there a way to consolidate this?
@@ -103,20 +108,25 @@ REFACTOR
 	Better way of setting the maxValue of an upgrade item. right now you have to do it in code AND in the scene. should just be 1 place.
 	Difficulty curve needs to be redone completely.
 	Homeplanet's rotation speed shouldn't be set by player as it is right now b/c of the upgrade system
+	what exactly does gameRunning and gameLooping do anyway
+	revisit ResetPlayerStates to see what else needs resetting
+	player's activateJetpack and resumeJetpack code is basically the same
 	
-- particle system
-	trails: https://www.youtube.com/watch?v=agr-QEsYwD0
-- upgrade to new unity?
-
 		
 BUGS
+- resolution is still messed up on different devices. need a definitive way to define resolution.
 - when planet is flying towards you and you jump on it you get crushed between it and the home planet
+- sometimes when pressing jetpack super close to landing, you'll start the jetpack animation only to immediately land. 
+	maybe raycast ahead and make sure you don't land in the next few frames when firing jetpacks?
 - camera stuck on shaking even when game is over (because everything is based on deltaTime, maybe put camera on real time)
+	same with charging
 - if big planets hits a small planet that explodes, the big planet keeps going and overlaps the small planet 
 	stop movement of this planet or bounce it off upon collision
 - detecting planet landing messes up when a bunch of planets are bundled up together
 - sometimes pressing the launch button damages the planet but you don't actually take off
 - sometimes coins would circle you without actually being picked up
+- if two planets are close together already, pushing one won't necessarily damage the other
+- planet shifting might need some clarification when it happens 
 - blowing up planets near corners and then immediately warping will cause coins chasing you to lose target due to being warped to the wrong side.
 	solution: coins spawned from leaving planets do not warp and are children of the player object. so when player gets cloned during warping they get cloned too.
 		their speed scales to the player's speed so they always get collected after set amount of seconds
@@ -130,31 +140,24 @@ BUGS
 				if it isn't pick a new spot to spawn. if this doesnt work 3 times in a row. wait X seconds.
 - trail renderer goes away after some orbit slings
 - quitting using the pause menu during the game still makes the GameOver coroutine run
-- player not always landing on planet even when it obvious ht it. same with coin attraction
-		
-ORBITS
-- goal: home planet should absolute attract within a certain zone, and 
-- gravity formula of 2.5 power and home planet mass of 18 seems too much. 
+- if planet you're on gets hit by another planet and blows up, you're just stuck
+
 
 
 Development phases
-- phase 2: polish the game
-	Special skills
-	music
-		background music
-		sound effects
-	art 
-		players
-		planets
-		pick ups
-		backgrounds
-		menus
-	special effects
-		landing
-		take off
-		pick up
-	particle effects
-		
+- phase 2: flesh out the game - mid december
+	create and use art assets
+	design a better user interface 
+	redesign upgrade system to double as tutorial screen.
+	simple tutorial pop ups durng the first few runs of the game
+	progression system and few more levels. maybe boss battle?
+- phase 3: polish and release
+	refactor the code 
+	add some more juice to the game
+	add leaderboards
+
+
+
 
 Alpha Feedback
 - do we even need a jump button? maybe you can just press anywhere on the screen. show "charging" with animation
